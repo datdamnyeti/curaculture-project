@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120">
+  <!-- Background -->
+  <rect width="300" height="120" fill="white" />
+  
+  <!-- Colored squares -->
+  <rect x="20" y="20" width="40" height="40" fill="#a9e9f4" /> <!-- Light blue square -->
+  <rect x="20" y="60" width="40" height="40" fill="#c7c0f4" /> <!-- Light purple square -->
+  <rect x="60" y="60" width="40" height="40" fill="#7ea4d9" /> <!-- Medium blue square -->
+  
+  <!-- Main text - increased to 30px from 24px -->
+  <text x="120" y="60" font-family="Arial, sans-serif" font-size="30" font-weight="normal" fill="#333333">curaculture</text>
+  
+  <!-- Slogan - kept at 12px -->
+  <text x="120" y="85" font-family="Arial, sans-serif" font-size="12" font-weight="normal" fill="#666666">Measure. Improve. Thrive.</text>
+</svg>
