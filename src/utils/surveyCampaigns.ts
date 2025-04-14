@@ -212,7 +212,7 @@ export const sendCampaignInvitations = async (
 };
 
 /**
- * Initialize with sample campaigns for demo purposes
+ * Initialize with a sample retention campaign for demo purposes
  */
 export const initializeSampleCampaigns = (clinicId: string): void => {
   // Check if campaigns already exist
@@ -222,44 +222,34 @@ export const initializeSampleCampaigns = (clinicId: string): void => {
     return;
   }
   
-  // Default email template
-  const defaultEmailTemplate = `
+  // Retention survey email template
+  const retentionEmailTemplate = `
 Dear Team Member,
 
-You are invited to participate in our practice culture assessment. Your feedback is important to us and will help identify areas where we can improve.
+We value your contributions to our practice and want to ensure we're creating an environment where you can thrive long-term. 
 
-The survey is anonymous and should take about 10-15 minutes to complete. Please click the link below to access the survey:
+Please take a few minutes to complete our staff retention assessment. Your anonymous feedback will help us understand what's working well and what we need to improve to better support our team.
 
+Access the survey here:
 {{surveyLink}}
 
-Thank you for your participation!
+Thank you for your honest input.
 
 Best regards,
 Practice Management Team
   `.trim();
   
-  // Create sample campaigns
-  const sampleCampaigns: CampaignData[] = [
-    {
-      name: 'Spring 2025 Culture Assessment',
-      description: 'Annual culture assessment for all staff members',
-      surveyType: 'culture',
-      emailSubject: 'Please participate in our Culture Assessment',
-      emailBody: defaultEmailTemplate
-    },
-    {
-      name: 'Team Satisfaction Survey',
-      description: 'Quarterly team satisfaction pulse check',
-      surveyType: 'satisfaction',
-      emailSubject: 'Your input matters: Team Satisfaction Survey',
-      emailBody: defaultEmailTemplate
-    }
-  ];
+  // Create just one sample retention campaign
+  const sampleCampaign: CampaignData = {
+    name: 'Practice Retention Assessment',
+    description: 'Staff retention assessment to improve workplace satisfaction',
+    surveyType: 'retention',
+    emailSubject: 'Please participate in our Retention Assessment',
+    emailBody: retentionEmailTemplate
+  };
   
-  // Create each sample campaign
-  sampleCampaigns.forEach(campaignData => {
-    createSurveyCampaign(clinicId, campaignData);
-  });
+  // Create the sample campaign
+  createSurveyCampaign(clinicId, sampleCampaign);
   
-  console.log(`Initialized ${sampleCampaigns.length} sample campaigns for clinic ${clinicId}`);
+  console.log(`Initialized retention assessment campaign for clinic ${clinicId}`);
 };

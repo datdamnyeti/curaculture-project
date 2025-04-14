@@ -10,23 +10,22 @@ import { SurveyType, getSurveyTypeName } from '../data/surveyTypes';
 
 const SurveyPage: React.FC = () => {
   const router = useRouter();
-  const { token, type = 'culture' } = router.query;
+  // Default to retention survey type for MVP
+  const { token, type = 'retention' } = router.query;
   
   const [isLoading, setIsLoading] = useState(true);
   const [isValid, setIsValid] = useState(false);
   const [clinicId, setClinicId] = useState<string | undefined>(undefined);
   const [campaignId, setCampaignId] = useState<string | undefined>(undefined);
   const [campaignName, setCampaignName] = useState<string | undefined>(undefined);
-  const [surveyType, setSurveyType] = useState<SurveyType>('culture');
+  const [surveyType, setSurveyType] = useState<SurveyType>('retention');
   const [error, setError] = useState<string | undefined>(undefined);
   
   useEffect(() => {
     // Set survey type from query parameter if valid
     if (type && typeof type === 'string') {
-      const validType = ['culture', 'retention', 'satisfaction'].includes(type) 
-        ? type as SurveyType 
-        : 'culture';
-      setSurveyType(validType);
+      // Always default to retention for MVP
+      setSurveyType('retention');
     }
     
     if (token && typeof token === 'string') {
@@ -43,8 +42,8 @@ const SurveyPage: React.FC = () => {
         if (campaign) {
           setCampaignName(campaign.name);
           
-          // Get survey type from campaign
-          setSurveyType(campaign.surveyType);
+          // Always use retention survey type for MVP
+          setSurveyType('retention');
         }
       } else {
         setError('This survey link is invalid or has expired.');
@@ -52,7 +51,7 @@ const SurveyPage: React.FC = () => {
       
       setIsLoading(false);
     } else if (!token) {
-      // No token provided, using direct survey type
+      // No token provided, still use retention survey type
       setIsValid(true);
       setIsLoading(false);
     }
@@ -157,7 +156,7 @@ const SurveyPage: React.FC = () => {
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">{getSurveyTypeName(surveyType)}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Veterinary Practice Retention Assessment</h1>
           {campaignName && (
             <p className="text-gray-600 mt-2">{campaignName}</p>
           )}
@@ -171,7 +170,7 @@ const SurveyPage: React.FC = () => {
         </div>
         
         <SurveyRouter 
-          surveyType={surveyType}
+          surveyType='retention'
           onComplete={handleSurveyComplete}
           isAnonymous={true}
           demographicFields={getDemographicFields()}
