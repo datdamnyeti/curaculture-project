@@ -87,13 +87,13 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
   onCancel,
   isSubmitting
 }) => {
-  // Form state
+  // Form state - Set retention as the default for MVP
   const [campaignData, setCampaignData] = useState({
     name: '',
     description: '',
-    surveyType: 'culture' as SurveyType,
-    emailSubject: defaultEmailSubjects.culture,
-    emailBody: defaultEmailTemplates.culture
+    surveyType: 'retention' as SurveyType,
+    emailSubject: defaultEmailSubjects.retention,
+    emailBody: defaultEmailTemplates.retention
   });
   
   // Handle input changes
@@ -165,8 +165,8 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
           onChange={handleSurveyTypeChange}
           className="w-full px-3 py-2 border rounded-lg"
         >
-          <option value="culture">Culture Assessment</option>
           <option value="retention">Retention Survey</option>
+          <option value="culture">Culture Assessment</option>
           <option value="satisfaction">Client Satisfaction Survey</option>
         </select>
         <p className="text-xs text-gray-500 mt-1">

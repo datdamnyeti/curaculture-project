@@ -68,15 +68,14 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       setUser(result.user);
       setIsAuthenticated(true);
       
-      // Check if the user has any campaigns - if not, initialize samples
-      // We use a timeout to avoid blocking the login process
+      // Check if the user has any campaigns - if not, initialize sample retention campaign
       if (result.user.clinicId) {
         setTimeout(() => {
           try {
-            // Initialize sample campaigns
+            // Initialize a sample retention campaign
             initializeSampleCampaigns(result.user!.clinicId!);
           } catch (error) {
-            console.error("Error initializing sample campaigns:", error);
+            console.error("Error initializing sample campaign:", error);
           }
         }, 500);
       }
@@ -99,13 +98,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       setUser(result.user);
       setIsAuthenticated(true);
       
-      // Initialize sample campaigns for new user
+      // Initialize sample retention campaign for new user
       if (result.user.clinicId) {
         try {
           initializeSampleCampaigns(result.user.clinicId);
-          console.log(`Initialized sample campaigns for new user: ${result.user.email}`);
+          console.log(`Initialized sample retention campaign for new user: ${result.user.email}`);
         } catch (error) {
-          console.error("Error initializing sample campaigns:", error);
+          console.error("Error initializing sample campaign:", error);
         }
       }
     }
