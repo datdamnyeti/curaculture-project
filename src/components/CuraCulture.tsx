@@ -27,7 +27,7 @@ import { ChevronRight, Users, TrendingUp, Shield, LineChart, Mail, Lock, Buildin
 import DashboardView from './dashboard/DashboardView';
 import LandingView from './landing/LandingView';
 import AuthenticationView from './auth/AuthenticationView';
-import SurveyResultsView from './survey/SurveyResultsView';
+import SurveyResultsDashboard from './dashboard/SurveyResultsDashboard';
 import { useForm } from 'react-hook-form';
 import { saveSurveyData, getSurveyData, saveUser, getUser, clearAllData, User as StorageUser } from '../utils/storage';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
@@ -175,32 +175,6 @@ const CuraCultureContent: React.FC = () => {
     setCurrentView('results');
   };
   
-  // Modified adapter that supports both original and embedded question IDs
-  const adaptRetentionStructureForResults = () => {
-    return {
-      sections: RetentionSurveyStructure.sections.map(section => ({
-        id: section.id,
-        title: section.title,
-        subsections: [{
-          title: section.description || section.title,
-          questions: section.questions.map(q => {
-            // Handle both original and embedded format question IDs in responses
-            const originalId = q.id;
-            const embeddedId = `${section.id}--${q.id}`;
-            
-            return {
-              id: originalId, // Keep original ID for backward compatibility
-              embeddedId: embeddedId, // Add embedded ID for new format
-              text: q.text,
-              // Add more properties as needed
-              originalSectionId: section.id // Explicitly include section ID
-            };
-          })
-        }]
-      }))
-    };
-  };
-  
   return (
     <LoadingOverlay isLoading={loading} text="Loading CuraCulture...">
       <div className="min-h-screen bg-gray-50">
@@ -241,16 +215,26 @@ const CuraCultureContent: React.FC = () => {
             onComplete={handleSurveyComplete}
             initialValues={surveyData.responses}
             isAnonymous={false}
-            hideCategories={true} // Added flag to hide categories
+            hideCategories={true}
           />
         )}
         
         {currentView === 'results' && isAuthenticated && (
-          <SurveyResultsView 
-            surveyData={surveyData} 
-            surveyStructure={adaptRetentionStructureForResults()}
-            setCurrentView={setCurrentView} 
-          />
+          <div className="min-h-screen bg-gray-50 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="mb-8 flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">Assessment Results</h1>
+                <button
+                  onClick={() => setCurrentView('dashboard')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Back to Dashboard
+                </button>
+              </div>
+              
+              <SurveyResultsDashboard clinicId={user?.clinicId} />
+            </div>
+          </div>
         )}
       </div>
     </LoadingOverlay>
