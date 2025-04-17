@@ -215,7 +215,8 @@ const CuraCultureContent: React.FC = () => {
             onComplete={handleSurveyComplete}
             initialValues={surveyData.responses}
             isAnonymous={false}
-            hideCategories={true}
+            // No need for hideCategories property as we now always randomize questions
+            // while preserving category associations for data analysis
           />
         )}
         

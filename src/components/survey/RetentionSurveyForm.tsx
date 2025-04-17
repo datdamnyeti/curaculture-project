@@ -62,7 +62,7 @@ interface RetentionSurveyFormProps {
   demographicFields?: SurveyQuestion[];
   campaignId?: string;
   token?: string;
-  hideCategories?: boolean; // Added this property
+  hideCategories?: boolean; // Not used anymore, keeping for backward compatibility
 }
 
 // Utility functions for survey validation and progress tracking
@@ -143,21 +143,22 @@ const isSectionComplete = (
   return allRequiredFieldsHaveValues && hasNoErrors;
 };
 
-// Function to flatten and randomize survey questions
-const flattenAndRandomizeQuestions = (surveyData: SurveyData): SurveyData => {
-  // First, create a flat array of all questions
+// Function to flatten and preserve category mapping in question IDs
+const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData): SurveyData => {
+  // First, create a flat array of all questions, but maintain their category ID in the question metadata
   const allQuestions: ExtendedSurveyQuestion[] = [];
   
   // Skip the demographics section when flattening
   const demographicsSection = surveyData.sections.find(s => s.id === 'demographics');
   const nonDemographicSections = surveyData.sections.filter(s => s.id !== 'demographics');
   
-  // Get all questions except demographics
+  // Get all questions except demographics, preserving section ID in the question properties
   nonDemographicSections.forEach(section => {
     section.questions.forEach(question => {
+      // Store the original section ID in the question metadata
+      // This won't be visible to users but will be used for data collection
       allQuestions.push({
         ...question,
-        // Store the original section ID in a data attribute
         originalSectionId: section.id
       });
     });
@@ -172,10 +173,10 @@ const flattenAndRandomizeQuestions = (surveyData: SurveyData): SurveyData => {
     sections: [
       // Keep demographics section if it exists
       ...(demographicsSection ? [demographicsSection] : []),
-      // Add a single section with all randomized questions
+      // Add a single section with all randomized questions, but NO category title
       {
-        id: 'randomized_questions',
-        title: 'Assessment Questions',
+        id: 'all_questions', // Generic section ID
+        title: 'Assessment Questions', // Generic section title
         description: 'Please answer the following questions about your workplace experience.',
         questions: shuffledQuestions
       }
@@ -191,8 +192,7 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   isAnonymous = false,
   demographicFields = [],
   campaignId,
-  token,
-  hideCategories = false // Added default value
+  token
 }) => {
   // Get UI context for toast notifications and confirm dialogs
   const uiContext = useUI ? useUI() : {
@@ -219,10 +219,12 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   // Prepare survey data based on props
   const [surveyData, setSurveyData] = useState<SurveyData>(RetentionSurveyStructure as unknown as SurveyData);
   
-  // Update survey data if demographic fields are provided and randomize for anonymous users
+  // Update survey data - flatten and randomize questions while preserving category info
   useEffect(() => {
-    if (isAnonymous && demographicFields && demographicFields.length > 0) {
-      // Create a custom demographics section with the provided fields
+    let updatedSurvey = {...surveyData};
+    
+    // Add demographic fields if provided
+    if (demographicFields && demographicFields.length > 0) {
       const customDemographicsSection: SurveySection = {
         id: 'demographics',
         title: 'About You',
@@ -233,20 +235,19 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
         }))
       };
       
-      // Create a new survey with the custom demographics section as the first section
-      let updatedSurvey: SurveyData = {
-        ...surveyData,
+      updatedSurvey = {
+        ...updatedSurvey,
         sections: [
           customDemographicsSection,
-          ...surveyData.sections.filter(section => section.id !== 'demographics')
+          ...updatedSurvey.sections.filter(section => section.id !== 'demographics')
         ]
       };
-      
-      // Randomize questions for anonymous users
-      updatedSurvey = flattenAndRandomizeQuestions(updatedSurvey);
-      setSurveyData(updatedSurvey);
     }
-  }, [isAnonymous, demographicFields, surveyData]);
+    
+    // Always flatten and randomize questions, preserving category associations for data collection
+    updatedSurvey = flattenAndPreserveCategoryQuestions(updatedSurvey);
+    setSurveyData(updatedSurvey);
+  }, [demographicFields, surveyData]);
   
   // Create validation rules based on survey questions
   const buildValidationRules = (): ValidationRules => {
@@ -522,12 +523,32 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
       // Get the appropriate clinic ID
       const clinicId = user?.clinicId || 'default';
       
+      // Organize responses by their original categories
+      const organizedResponses: Record<string, any> = {};
+      
+      // For each question response
+      Object.keys(formValues).forEach(questionId => {
+        // Find the question in our flattened survey data
+        const allQuestions = surveyData.sections
+          .flatMap(section => section.questions as ExtendedSurveyQuestion[]);
+          
+        const question = allQuestions.find(q => q.id === questionId);
+        
+        if (question && 'originalSectionId' in question) {
+          // Use the original section ID to organize responses for dashboard categorization
+          organizedResponses[`${question.originalSectionId}_${questionId}`] = formValues[questionId];
+        } else {
+          // For demographics or questions without category, use as-is
+          organizedResponses[questionId] = formValues[questionId];
+        }
+      });
+      
       // Create survey data object
-      const surveyData: Partial<AnonymousSurveyResponse> = {
+      const surveyDataObj: Partial<AnonymousSurveyResponse> = {
         id: currentSurveyId || undefined, // Use existing ID if available
         isComplete: false,
         demographics: demographicData,
-        responses: formValues,
+        responses: organizedResponses,
         progress: currentProgress,
         campaignId: campaignId, // Include if provided
         token: token // Include if provided
@@ -535,7 +556,7 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
       
       // Save progress
       const surveyId = typeof saveSurveyProgress === 'function' 
-        ? await saveSurveyProgress(surveyData, clinicId, currentProgress)
+        ? await saveSurveyProgress(surveyDataObj, clinicId, currentProgress)
         : 'mock-survey-id';
       
       // Update current survey ID if it's new
@@ -621,25 +642,45 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
       // Get the appropriate clinic ID
       const clinicId = user?.clinicId || 'default';
       
-      // Create survey data object
-      const surveyData: Partial<AnonymousSurveyResponse> = {
-        id: currentSurveyId || undefined, // Use existing ID if available
+      // Organize responses by their original categories
+      const organizedResponses: Record<string, any> = {};
+      
+      // For each question response
+      Object.keys(formValues).forEach(questionId => {
+        // Find the question in our flattened survey data
+        const allQuestions = surveyData.sections
+          .flatMap(section => section.questions as ExtendedSurveyQuestion[]);
+          
+        const question = allQuestions.find(q => q.id === questionId);
+        
+        if (question && 'originalSectionId' in question) {
+          // Use the original section ID to organize responses for dashboard categorization
+          organizedResponses[`${question.originalSectionId}_${questionId}`] = formValues[questionId];
+        } else {
+          // For demographics or questions without category, use as-is
+          organizedResponses[questionId] = formValues[questionId];
+        }
+      });
+      
+      // Create survey data object with properly categorized responses
+      const surveyDataObj: Partial<AnonymousSurveyResponse> = {
+        id: currentSurveyId || undefined,
         isComplete: true,
         demographics: demographicData,
-        responses: formValues,
-        progress: 100, // Completed survey
-        campaignId: campaignId, // Include if provided
-        token: token // Include if provided
+        responses: organizedResponses,
+        progress: 100,
+        campaignId: campaignId,
+        token: token
       };
       
       // Save the completed survey
       if (typeof saveAnonymousSurvey === 'function') {
-        await saveAnonymousSurvey(surveyData, clinicId);
+        await saveAnonymousSurvey(surveyDataObj, clinicId);
       } else {
-        console.log('Mock saving survey:', surveyData);
+        console.log('Mock saving survey:', surveyDataObj);
       }
       
-      console.log('Survey submitted successfully:', formValues);
+      console.log('Survey submitted successfully:', organizedResponses);
       
       // Show completion state
       setIsComplete(true);
@@ -648,7 +689,7 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
       
       // Call the onComplete callback if provided
       if (onComplete) {
-        onComplete(formValues); // Pass formValues to onComplete
+        onComplete(organizedResponses); // Pass organized responses to onComplete
       }
     } catch (error) {
       console.error('Error submitting survey:', error);
@@ -694,10 +735,10 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-2 text-center">{surveyData.title}</h2>
-      {surveyData.description && (
-        <p className="text-gray-600 mb-6 text-center">{surveyData.description}</p>
-      )}
+      <h2 className="text-2xl font-bold mb-2 text-center">Veterinary Practice Assessment</h2>
+      <p className="text-gray-600 mb-6 text-center">
+        This assessment helps identify key factors affecting workplace quality and staff retention in your veterinary practice.
+      </p>
       
       {/* Survey Progress component */}
       <SurveyProgress
@@ -718,16 +759,6 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
         {lastSavedAt && (
           <div className="text-sm text-gray-500 mb-4 flex items-center">
             <span>Last saved: {lastSavedAt.toLocaleTimeString()}</span>
-          </div>
-        )}
-        
-        {/* Show category information if not hidden */}
-        {!hideCategories && currentSection.id !== 'demographics' && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-800">Category Information</h4>
-            <p className="text-sm text-blue-700">
-              This section helps assess the {currentSection.title.toLowerCase()} aspects of your veterinary practice.
-            </p>
           </div>
         )}
         
