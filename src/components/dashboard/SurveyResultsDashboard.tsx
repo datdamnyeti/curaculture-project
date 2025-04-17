@@ -38,17 +38,19 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
   });
   
   // Section IDs that match the RetentionSurveyStructure
+  // These IDs must match the exact section IDs used in categorizing question responses
+  // Updating them to match the exact IDs from the survey structure
   const sectionIds = [
-    'compensation',
-    'belonging',
-    'worklife', 
-    'workplace',
-    'leadership',
-    'values',
-    'psych_safety',
-    'growth',
-    'purpose',
-    'fairness'
+    'fair_compensation',
+    'team_relationships',
+    'work_life_balance', 
+    'practice_environment',
+    'leadership_quality',
+    'moral_ethical_alignment',
+    'psychological_safety',
+    'career_development',
+    'purpose_meaning',
+    'organizational_justice'
   ];
   
   // Use ONLY the current user's clinicId and not a default
@@ -100,8 +102,12 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
         const surveys = getAnonymousSurveys(effectiveClinicId, { isComplete: true });
         setResponseCount(surveys.length);
         
+        console.log('Fetching scores for sections:', sectionIds);
+        
         // Get aggregated scores by section
         const rawSectionScores = getAggregatedSectionScores(effectiveClinicId, sectionIds);
+        
+        console.log('Raw section scores:', rawSectionScores);
         
         // Process the scores
         const processedScores = Object.entries(rawSectionScores).map(([id, score]) => {

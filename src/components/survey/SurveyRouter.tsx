@@ -13,11 +13,12 @@ interface SurveyRouterProps {
   demographicFields?: any[];
   campaignId?: string;
   token?: string;
-  hideCategories?: boolean; // Added the missing property
+  hideCategories?: boolean; // We keep this for backward compatibility but no longer use it
 }
 
 /**
  * SurveyRouter component that routes to the appropriate survey form based on the surveyType
+ * Now always randomizes questions while preserving category data for dashboard display
  */
 const SurveyRouter: React.FC<SurveyRouterProps> = ({
   surveyType,
@@ -26,8 +27,7 @@ const SurveyRouter: React.FC<SurveyRouterProps> = ({
   isAnonymous = false,
   demographicFields = [],
   campaignId,
-  token,
-  hideCategories = false // Set default value to false
+  token
 }) => {
   // Common props for all survey forms
   const surveyProps = {
@@ -36,8 +36,8 @@ const SurveyRouter: React.FC<SurveyRouterProps> = ({
     isAnonymous,
     demographicFields,
     campaignId,
-    token,
-    hideCategories // Pass the property to the form
+    token
+    // hideCategories prop is no longer needed as we always randomize and preserve categories
   };
   
   // Always return the RetentionSurveyForm regardless of surveyType
