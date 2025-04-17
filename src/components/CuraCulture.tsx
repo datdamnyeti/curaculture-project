@@ -175,7 +175,7 @@ const CuraCultureContent: React.FC = () => {
     setCurrentView('results');
   };
   
-  // Create a simple adapter for survey results until we can update SurveyResultsView
+  // Modified adapter that supports both original and embedded question IDs
   const adaptRetentionStructureForResults = () => {
     return {
       sections: RetentionSurveyStructure.sections.map(section => ({
@@ -183,10 +183,19 @@ const CuraCultureContent: React.FC = () => {
         title: section.title,
         subsections: [{
           title: section.description || section.title,
-          questions: section.questions.map(q => ({
-            id: q.id,
-            text: q.text
-          }))
+          questions: section.questions.map(q => {
+            // Handle both original and embedded format question IDs in responses
+            const originalId = q.id;
+            const embeddedId = `${section.id}--${q.id}`;
+            
+            return {
+              id: originalId, // Keep original ID for backward compatibility
+              embeddedId: embeddedId, // Add embedded ID for new format
+              text: q.text,
+              // Add more properties as needed
+              originalSectionId: section.id // Explicitly include section ID
+            };
+          })
         }]
       }))
     };
@@ -232,6 +241,7 @@ const CuraCultureContent: React.FC = () => {
             onComplete={handleSurveyComplete}
             initialValues={surveyData.responses}
             isAnonymous={false}
+            hideCategories={true} // Added flag to hide categories
           />
         )}
         
