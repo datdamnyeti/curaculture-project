@@ -36,6 +36,11 @@ interface SurveyQuestion {
   description?: string;
 }
 
+// Define a type for questions with originalSectionId
+interface ExtendedSurveyQuestion extends SurveyQuestion {
+  originalSectionId?: string;
+}
+
 interface SurveySection {
   id: string;
   title: string;
@@ -58,6 +63,126 @@ interface RetentionSurveyFormProps {
   campaignId?: string;
   token?: string;
 }
+
+// Utility functions for survey validation and progress tracking
+const calculateSurveyProgress = (
+  formValues: Record<string, any>,
+  surveyData: SurveyData
+): number => {
+  const totalQuestions = countAllQuestions(surveyData);
+  const answeredQuestions = countAnsweredQuestions(formValues);
+  return (answeredQuestions / totalQuestions) * 100;
+};
+
+const countAllQuestions = (surveyData: SurveyData): number => {
+  if (!surveyData || !surveyData.sections) return 0;
+  
+  return surveyData.sections.reduce((total: number, section: SurveySection) => {
+    return total + section.questions.length;
+  }, 0);
+};
+
+const countAnsweredQuestions = (formValues: Record<string, any>): number => {
+  return Object.keys(formValues).filter(key => {
+    // Check if it has a valid value
+    const value = formValues[key];
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+    return value !== undefined && value !== null && value !== '';
+  }).length;
+};
+
+const validateSection = (
+  section: SurveySection,
+  formValues: Record<string, any>,
+  validationRules: ValidationRules
+): ValidationErrors => {
+  // Get question IDs from current section
+  const questionIds: string[] = section.questions.map(q => q.id);
+  
+  // Create section validation rules
+  const sectionRules: ValidationRules = {};
+  questionIds.forEach(id => {
+    if (validationRules[id]) {
+      sectionRules[id] = validationRules[id];
+    }
+  });
+  
+  // Extract section data from form values
+  const sectionData: Record<string, any> = {};
+  questionIds.forEach(id => {
+    sectionData[id] = formValues[id];
+  });
+  
+  // Return validation errors for this section
+  return validateForm(sectionData, sectionRules);
+};
+
+const isSectionComplete = (
+  section: SurveySection,
+  formValues: Record<string, any>,
+  validationErrors: ValidationErrors
+): boolean => {
+  // Check if all required fields have values
+  const allRequiredFieldsHaveValues = section.questions
+    .filter(q => q.required)
+    .every(q => {
+      const value = formValues[q.id];
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return value !== undefined && value !== null && value !== '';
+    });
+  
+  // Check if section has no validation errors
+  const questionIds = section.questions.map(q => q.id);
+  const hasNoErrors = questionIds.every(id => !validationErrors[id] || validationErrors[id].length === 0);
+  
+  return allRequiredFieldsHaveValues && hasNoErrors;
+};
+
+// Function to flatten and randomize survey questions
+const flattenAndRandomizeQuestions = (surveyData: SurveyData): SurveyData => {
+  // First, create a flat array of all questions
+  const allQuestions: ExtendedSurveyQuestion[] = [];
+  
+  // Skip the demographics section when flattening
+  const demographicsSection = surveyData.sections.find(s => s.id === 'demographics');
+  const nonDemographicSections = surveyData.sections.filter(s => s.id !== 'demographics');
+  
+  // Get all questions except demographics
+  nonDemographicSections.forEach(section => {
+    section.questions.forEach(question => {
+      allQuestions.push({
+        ...question,
+        // Store the original section ID in a data attribute
+        originalSectionId: section.id
+      });
+    });
+  });
+  
+  // Randomize the order of questions
+  const shuffledQuestions = [...allQuestions].sort(() => Math.random() - 0.5);
+  
+  // Create a new survey structure with demographics first, then all randomized questions
+  const newSurveyData: SurveyData = {
+    ...surveyData,
+    sections: [
+      // Keep demographics section if it exists
+      ...(demographicsSection ? [demographicsSection] : []),
+      // Add a single section with all randomized questions
+      {
+        id: 'randomized_questions',
+        title: 'Assessment Questions',
+        description: 'Please answer the following questions about your workplace experience.',
+        questions: shuffledQuestions
+      }
+    ]
+  };
+  
+  return newSurveyData;
+};
 
 const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   onComplete,
@@ -92,7 +217,7 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   // Prepare survey data based on props
   const [surveyData, setSurveyData] = useState<SurveyData>(RetentionSurveyStructure as unknown as SurveyData);
   
-  // Update survey data if demographic fields are provided
+  // Update survey data if demographic fields are provided and randomize for anonymous users
   useEffect(() => {
     if (isAnonymous && demographicFields && demographicFields.length > 0) {
       // Create a custom demographics section with the provided fields
@@ -107,7 +232,7 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
       };
       
       // Create a new survey with the custom demographics section as the first section
-      const updatedSurvey: SurveyData = {
+      let updatedSurvey: SurveyData = {
         ...surveyData,
         sections: [
           customDemographicsSection,
@@ -115,6 +240,8 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
         ]
       };
       
+      // Randomize questions for anonymous users
+      updatedSurvey = flattenAndRandomizeQuestions(updatedSurvey);
       setSurveyData(updatedSurvey);
     }
   }, [isAnonymous, demographicFields, surveyData]);
@@ -136,24 +263,7 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   const currentSection = surveyData.sections[currentSectionIndex];
   
   // Calculate survey progress
-  const countAllQuestions = (): number => {
-    return surveyData.sections.reduce((total: number, section: SurveySection) => {
-      return total + section.questions.length;
-    }, 0);
-  };
-  
-  const countAnsweredQuestions = (): number => {
-    return Object.keys(formValues).filter(key => {
-      // Check if it has a valid value
-      const value = formValues[key];
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
-      return value !== undefined && value !== null && value !== '';
-    }).length;
-  };
-  
-  const progress = (countAnsweredQuestions() / countAllQuestions()) * 100;
+  const progress = calculateSurveyProgress(formValues, surveyData);
   
   // Validate the current section continuously
   useEffect(() => {
