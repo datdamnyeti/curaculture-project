@@ -7,12 +7,13 @@ import {
 } from '../../utils/anonymousSurveyStorage';
 import { useAuth } from '../../contexts/AuthContext';
 import { RetentionSurveyStructure } from '../../data/retentionSurveyStructure';
+import { getCategoryName, getCategoryById } from '../../utils/categoryDescriptions';
+import InfoTooltip from '../ui/InfoTooltip';
 
 interface SectionScore {
   id: string;
   name: string;
   score: number;
-  percentage: number;
   color: string;
 }
 
@@ -36,27 +37,22 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
     improvementAreas: [] 
   });
   
-  // Section IDs for our survey - update these to match your RetentionSurveyStructure
+  // Section IDs that match the RetentionSurveyStructure
   const sectionIds = [
-    'fair_compensation',
-    'team_relationships',
-    'work_life_balance', 
-    'practice_environment',
-    'leadership_quality',
-    'moral_ethical_alignment',
-    'psychological_safety',
-    'career_development',
-    'purpose_meaning',
-    'organizational_justice'
+    'compensation',
+    'belonging',
+    'worklife', 
+    'workplace',
+    'leadership',
+    'values',
+    'psych_safety',
+    'growth',
+    'purpose',
+    'fairness'
   ];
   
   // Use ONLY the current user's clinicId and not a default
   const effectiveClinicId = clinicId || user?.clinicId;
-  
-  // Simple console log for debugging
-  useEffect(() => {
-    console.log('Current user clinicId:', user?.clinicId);
-  }, [user]);
   
   // Don't show anything if there's no valid clinicId
   if (!effectiveClinicId) {
@@ -70,6 +66,30 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
       </div>
     );
   }
+  
+  // Get the appropriate color class based on raw Likert score
+  const getColorForScore = (score: number): string => {
+    if (score >= 5.5) return 'bg-green-500';  // Green for 5.5-7
+    if (score >= 2.6) return 'bg-yellow-500'; // Yellow for 2.6-5.4
+    return 'bg-red-500';                      // Red for 1-2.5
+  };
+  
+  // Get a text color class based on score
+  const getTextColorForScore = (score: number): string => {
+    if (score >= 5.5) return 'text-green-700';  // Green for 5.5-7
+    if (score >= 2.6) return 'text-yellow-700'; // Yellow for 2.6-5.4
+    return 'text-red-700';                     // Red for 1-2.5
+  };
+  
+  // Get a descriptive label based on score
+  const getScoreLabel = (score: number): string => {
+    if (score >= 6.5) return 'Excellent';
+    if (score >= 5.5) return 'Very Good';
+    if (score >= 4.5) return 'Good';
+    if (score >= 3.5) return 'Fair';
+    if (score >= 2.6) return 'Needs Improvement';
+    return 'Serious Concern';
+  };
   
   useEffect(() => {
     const loadData = () => {
@@ -85,23 +105,21 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
         
         // Process the scores
         const processedScores = Object.entries(rawSectionScores).map(([id, score]) => {
-          const percentage = (score / 7) * 100; // Convert 1-7 scale to percentage
           return {
             id,
-            name: getSectionName(id),
+            name: getCategoryName(id), // Use our helper function for human-readable names
             score: score,
-            percentage: percentage,
-            color: getColorForScore(percentage)
+            color: getColorForScore(score)
           };
         });
         
         // Sort by score (highest to lowest)
-        processedScores.sort((a, b) => b.percentage - a.percentage);
+        processedScores.sort((a, b) => b.score - a.score);
         
         setSectionScores(processedScores);
         
         // Calculate overall average score
-        const totalScore = processedScores.reduce((sum, section) => sum + section.percentage, 0);
+        const totalScore = processedScores.reduce((sum, section) => sum + section.score, 0);
         const avgScore = processedScores.length > 0 ? totalScore / processedScores.length : 0;
         setOverallScore(avgScore);
         
@@ -117,56 +135,6 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
     
     loadData();
   }, [effectiveClinicId, sectionIds]);
-  
-  // Helper function to get a human-readable section name
-  const getSectionName = (sectionId: string): string => {
-    // Look up section names from RetentionSurveyStructure
-    const section = RetentionSurveyStructure.sections.find(s => s.id === sectionId);
-    if (section) {
-      // Remove numbering from title (e.g., "1. Fair Compensation" -> "Fair Compensation")
-      return section.title.replace(/^\d+\.\s+/, '');
-    }
-    
-    // Fallback naming for sections not found in structure
-    const names: Record<string, string> = {
-      fair_compensation: 'Fair Compensation',
-      team_relationships: 'Team Relationships and Camaraderie',
-      work_life_balance: 'Work-Life Balance',
-      practice_environment: 'Practice Environment',
-      leadership_quality: 'Leadership Quality',
-      moral_ethical_alignment: 'Moral and Ethical Alignment',
-      psychological_safety: 'Psychological Safety',
-      career_development: 'Career Development',
-      purpose_meaning: 'Sense of Purpose and Meaning',
-      organizational_justice: 'Organizational Justice'
-    };
-    
-    return names[sectionId] || sectionId;
-  };
-  
-  // Get the appropriate color class based on score
-  const getColorForScore = (percentage: number): string => {
-    if (percentage >= 80) return 'bg-green-500';
-    if (percentage >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-  
-  // Get a text color class based on score
-  const getTextColorForScore = (percentage: number): string => {
-    if (percentage >= 80) return 'text-green-700';
-    if (percentage >= 60) return 'text-yellow-700';
-    return 'text-red-700';
-  };
-
-  // Get a descriptive label based on score
-  const getScoreLabel = (percentage: number): string => {
-    if (percentage >= 90) return 'Excellent';
-    if (percentage >= 80) return 'Very Good';
-    if (percentage >= 70) return 'Good';
-    if (percentage >= 60) return 'Fair';
-    if (percentage >= 50) return 'Needs Improvement';
-    return 'Serious Concern';
-  };
   
   if (loading) {
     return (
@@ -203,8 +171,8 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
             <h3 className="text-xl font-medium mb-3 text-center">Overall Practice Score</h3>
             <div className="flex flex-col items-center">
               <div className={`w-40 h-40 rounded-full flex flex-col items-center justify-center ${getColorForScore(overallScore)} text-white mb-4`}>
-                <span className="text-4xl font-bold">{Math.round(overallScore)}</span>
-                <span className="text-sm mt-1">out of 100</span>
+                <span className="text-4xl font-bold">{overallScore.toFixed(1)}</span>
+                <span className="text-sm mt-1">out of 7</span>
               </div>
               <span className="text-lg font-medium mt-2 mb-1">{getScoreLabel(overallScore)}</span>
               <p className="text-gray-500 text-center max-w-md text-sm">
@@ -212,23 +180,49 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
               </p>
             </div>
             
-            {/* Overall Progress Bar */}
-            <div className="mt-6">
+            {/* Scale explanation */}
+            <div className="mt-6 text-sm text-gray-600">
+              <div className="flex justify-between mb-2">
+                <span>1</span>
+                <span>2</span>
+                <span>3</span>
+                <span>4</span>
+                <span>5</span>
+                <span>6</span>
+                <span>7</span>
+              </div>
               <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
                 <div 
-                  className={`${getColorForScore(overallScore)} h-4 rounded-full`} 
-                  style={{ width: `${overallScore}%` }}
+                  className={`${getColorForScore(overallScore)} h-4 rounded-full transition-all duration-300`} 
+                  style={{ width: `${(overallScore / 7) * 100}%` }}
                 ></div>
               </div>
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>0</span>
-                <span>25</span>
-                <span>50</span>
-                <span>75</span>
-                <span>100</span>
+              <div className="flex justify-between">
+                <span>Strongly Disagree</span>
+                <span className="text-center">Neutral</span>
+                <span>Strongly Agree</span>
               </div>
             </div>
           </div>
+        </div>
+        
+        {/* Scale Legend */}
+        <div className="mt-4 mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <h4 className="font-medium mb-2">Understanding Your Results</h4>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-center">
+              <span className="w-4 h-4 inline-block bg-green-500 rounded-full mr-2"></span>
+              <span><strong>5.5-7.0</strong>: Strong performance - Areas where your practice excels</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-4 h-4 inline-block bg-yellow-500 rounded-full mr-2"></span>
+              <span><strong>2.6-5.4</strong>: Moderate performance - Areas with room for improvement</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-4 h-4 inline-block bg-red-500 rounded-full mr-2"></span>
+              <span><strong>1.0-2.5</strong>: Needs attention - Areas requiring significant improvement</span>
+            </li>
+          </ul>
         </div>
         
         {/* Section Scores */}
@@ -238,22 +232,30 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
             {sectionScores.map((section) => (
               <div key={section.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium">{section.name}</h4>
                   <div className="flex items-center">
-                    <div className={`mr-2 px-2 py-1 rounded-lg ${getTextColorForScore(section.percentage)} bg-opacity-20 ${section.color.replace('bg-', 'bg-opacity-20 bg-')} font-semibold`}>
-                      {Math.round(section.percentage)}
+                    <h4 className="font-medium">{section.name}</h4>
+                    <div className="ml-2">
+                      <InfoTooltip 
+                        content={getCategoryById(section.id)?.description || ''} 
+                        position="right"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className={`mr-2 px-2 py-1 rounded-lg ${getTextColorForScore(section.score)} bg-opacity-20 ${section.color.replace('bg-', 'bg-opacity-20 bg-')} font-semibold`}>
+                      {section.score.toFixed(1)}
                     </div>
                   </div>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
                   <div 
                     className={`${section.color} h-2.5 rounded-full`} 
-                    style={{ width: `${section.percentage}%` }}
+                    style={{ width: `${(section.score / 7) * 100}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between text-xs text-gray-400">
-                  <span>0</span>
-                  <span>100</span>
+                  <span>1</span>
+                  <span>7</span>
                 </div>
               </div>
             ))}
