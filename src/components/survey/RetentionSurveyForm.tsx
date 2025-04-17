@@ -62,6 +62,7 @@ interface RetentionSurveyFormProps {
   demographicFields?: SurveyQuestion[];
   campaignId?: string;
   token?: string;
+  hideCategories?: boolean; // Added this property
 }
 
 // Utility functions for survey validation and progress tracking
@@ -190,7 +191,8 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   isAnonymous = false,
   demographicFields = [],
   campaignId,
-  token
+  token,
+  hideCategories = false // Added default value
 }) => {
   // Get UI context for toast notifications and confirm dialogs
   const uiContext = useUI ? useUI() : {
@@ -716,6 +718,16 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
         {lastSavedAt && (
           <div className="text-sm text-gray-500 mb-4 flex items-center">
             <span>Last saved: {lastSavedAt.toLocaleTimeString()}</span>
+          </div>
+        )}
+        
+        {/* Show category information if not hidden */}
+        {!hideCategories && currentSection.id !== 'demographics' && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-800">Category Information</h4>
+            <p className="text-sm text-blue-700">
+              This section helps assess the {currentSection.title.toLowerCase()} aspects of your veterinary practice.
+            </p>
           </div>
         )}
         

@@ -13,6 +13,7 @@ interface SurveyRouterProps {
   demographicFields?: any[];
   campaignId?: string;
   token?: string;
+  hideCategories?: boolean; // Added the missing property
 }
 
 /**
@@ -25,7 +26,8 @@ const SurveyRouter: React.FC<SurveyRouterProps> = ({
   isAnonymous = false,
   demographicFields = [],
   campaignId,
-  token
+  token,
+  hideCategories = false // Set default value to false
 }) => {
   // Common props for all survey forms
   const surveyProps = {
@@ -34,7 +36,8 @@ const SurveyRouter: React.FC<SurveyRouterProps> = ({
     isAnonymous,
     demographicFields,
     campaignId,
-    token
+    token,
+    hideCategories // Pass the property to the form
   };
   
   // Always return the RetentionSurveyForm regardless of surveyType
