@@ -1,10 +1,7 @@
 // src/components/ui/LoadingSpinner.tsx
 import React from 'react';
 
-interface LoadingSpinnerProps {
-  size?: 'small' | 'medium' | 'large';
-  color?: 'primary' | 'secondary' | 'white';
-  className?: string;
+import { LoadingSpinnerProps } from '../../types';
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 

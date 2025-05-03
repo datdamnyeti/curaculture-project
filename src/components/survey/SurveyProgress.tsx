@@ -1,12 +1,7 @@
 // src/components/survey/SurveyProgress.tsx
 import React from 'react';
 
-interface SurveyProgressProps {
-  currentSection: number;
-  totalSections: number;
-  sectionTitle: string;
-  progress: number;
-}
+import { SurveyProgressProps } from '../../types';
 
 const SurveyProgress: React.FC<SurveyProgressProps> = ({
   currentSection,
