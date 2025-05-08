@@ -1,204 +1,61 @@
-/**
- * Save a campaign to localStorage
- */
-const saveCampaign = (campaign: SurveyCampaign): void => {
-  try {
-    const campaigns = getCampaigns(campaign.clinicId);
-    
-    // Find existing campaign or add new one
-    const existingIndex = campaigns.findIndex(c => c.id === campaign.id);
-    
-    if (existingIndex >= 0) {
-      campaigns[existingIndex] = campaign;
-    } else {
-      campaigns.push(campaign);
+// src/pages/survey-page.tsx
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { validateSurveyToken } from '../utils/surveyTokens';
+import SurveyRouter from '../components/survey/SurveyRouter';
+import LoadingOverlay from '../components/ui/LoadingOverlay';
+
+const SurveyPage: React.FC = () => {
+  const router = useRouter();
+  const { token } = router.query;
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isValidToken, setIsValidToken] = useState(false);
+  const [campaignId, setCampaignId] = useState<string | undefined>();
+  const [clinicId, setClinicId] = useState<string | undefined>();
+  
+  useEffect(() => {
+    if (!token || typeof token !== 'string') {
+      setIsLoading(false);
+      return;
     }
     
-    // Save to localStorage
-    localStorage.setItem(`curaCulture_campaigns_${campaign.clinicId}`, JSON.stringify(campaigns));
-  } catch (error) {
-    console.error('Error saving campaign:', error);
-    throw new Error('Failed to save campaign');
-  }
-};
-
-/**
- * Get all campaigns for a clinic
- */
-export const getCampaigns = (clinicId: string): SurveyCampaign[] => {
-  try {
-    const campaignsJson = localStorage.getItem(`curaCulture_campaigns_${clinicId}`);
-    if (!campaignsJson) return [];
+    // Validate the token
+    const result = validateSurveyToken(token);
     
-    const campaigns: SurveyCampaign[] = JSON.parse(campaignsJson);
-    
-    // Ensure dates are properly parsed
-    return campaigns.map(campaign => ({
-      ...campaign,
-      createdAt: new Date(campaign.createdAt),
-      expiresAt: campaign.expiresAt ? new Date(campaign.expiresAt) : undefined
-    }));
-  } catch (error) {
-    console.error('Error retrieving campaigns:', error);
-    return [];
+    setIsValidToken(result.valid);
+    setCampaignId(result.campaignId);
+    setClinicId(result.clinicId);
+    setIsLoading(false);
+  }, [token]);
+  
+  if (isLoading) {
+    return <LoadingOverlay isLoading={true} text="Loading survey..." />;
   }
+  
+  if (!isValidToken) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Invalid Survey Link</h1>
+          <p className="text-gray-700 mb-6">
+            This survey link is invalid or has expired. Please contact your administrator for a new link.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <SurveyRouter 
+        surveyType="retention"
+        isAnonymous={true}
+        campaignId={campaignId}
+        token={token as string}
+      />
+    </div>
+  );
 };
 
-/**
- * Get a specific campaign
- */
-export const getCampaign = (campaignId: string, clinicId: string): SurveyCampaign | null => {
-  const campaigns = getCampaigns(clinicId);
-  return campaigns.find(c => c.id === campaignId) || null;
-};
-
-/**
- * Update a campaign
- */
-export const updateCampaign = (
-  campaignId: string,
-  clinicId: string,
-  updates: Partial<Omit<SurveyCampaign, 'id' | 'clinicId'>>
-): SurveyCampaign | null => {
-  const campaign = getCampaign(campaignId, clinicId);
-  
-  if (!campaign) {
-    console.error(`Campaign not found: ${campaignId}`);
-    return null;
-  }
-  
-  const updatedCampaign = {
-    ...campaign,
-    ...updates
-  };
-  
-  saveCampaign(updatedCampaign);
-  
-  return updatedCampaign;
-};
-
-/**
- * Delete a campaign
- */
-export const deleteCampaign = (campaignId: string, clinicId: string): boolean => {
-  try {
-    const campaigns = getCampaigns(clinicId);
-    const updatedCampaigns = campaigns.filter(c => c.id !== campaignId);
-    
-    // If no campaigns were removed, return false
-    if (updatedCampaigns.length === campaigns.length) {
-      return false;
-    }
-    
-    localStorage.setItem(`curaCulture_campaigns_${clinicId}`, JSON.stringify(updatedCampaigns));
-    return true;
-  } catch (error) {
-    console.error('Error deleting campaign:', error);
-    return false;
-  }
-};
-
-/**
- * Send invitations for a campaign
- */
-export const sendCampaignInvitations = async (
-  campaignId: string,
-  clinicId: string,
-  emails: string[]
-): Promise<{ success: boolean; sent: number; failed: number }> => {
-  const campaign = getCampaign(campaignId, clinicId);
-  
-  if (!campaign) {
-    console.error(`Campaign not found: ${campaignId}`);
-    return { success: false, sent: 0, failed: emails.length };
-  }
-  
-  let sent = 0;
-  let failed = 0;
-  
-  // Process each email
-  for (const email of emails) {
-    try {
-      // Generate a token for this invitation
-      const token = generateSurveyToken();
-      
-      // Save the token with associated campaign and email
-      saveSurveyToken(token, campaignId, email);
-      
-      // Create the survey link
-      const baseUrl = typeof window !== 'undefined' 
-        ? window.location.origin 
-        : 'http://localhost:3000';
-      const surveyLink = `${baseUrl}/survey-page?token=${token}`;
-      
-      // Send the invitation email
-      const success = await sendSurveyInvitation(
-        email,
-        surveyLink,
-        campaign.emailSubject,
-        campaign.emailBody
-      );
-      
-      if (success) {
-        // Mark the token as sent
-        markTokenSent(token);
-        sent++;
-      } else {
-        failed++;
-      }
-    } catch (error) {
-      console.error(`Error sending invitation to ${email}:`, error);
-      failed++;
-    }
-  }
-  
-  // If any invitations were sent successfully, update campaign status to active
-  if (sent > 0 && campaign.status === 'draft') {
-    updateCampaign(campaignId, clinicId, { status: 'active' });
-  }
-  
-  return { success: true, sent, failed };
-};
-
-/**
- * Initialize with a sample retention campaign for demo purposes
- */
-export const initializeSampleCampaigns = (clinicId: string): void => {
-  // Check if campaigns already exist
-  const existingCampaigns = getCampaigns(clinicId);
-  
-  if (existingCampaigns.length > 0) {
-    return;
-  }
-  
-  // Retention survey email template
-  const retentionEmailTemplate = `
-Dear Team Member,
-
-We value your contributions to our practice and want to ensure we're creating an environment where you can thrive long-term. 
-
-Please take a few minutes to complete our staff retention assessment. Your anonymous feedback will help us understand what's working well and what we need to improve to better support our team.
-
-Access the survey here:
-{{surveyLink}}
-
-Thank you for your honest input.
-
-Best regards,
-Practice Management Team
-  `.trim();
-  
-  // Create just one sample retention campaign
-  const sampleCampaign: CampaignData = {
-    name: 'Practice Retention Assessment',
-    description: 'Staff retention assessment to improve workplace satisfaction',
-    surveyType: 'retention',
-    emailSubject: 'Please participate in our Retention Assessment',
-    emailBody: retentionEmailTemplate
-  };
-  
-  // Create the sample campaign
-  createSurveyCampaign(clinicId, sampleCampaign);
-  
-  console.log(`Initialized retention assessment campaign for clinic ${clinicId}`);
-};
+export default SurveyPage;

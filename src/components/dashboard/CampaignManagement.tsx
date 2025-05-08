@@ -2,73 +2,31 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, PieChart, Trash } from 'lucide-react';
 import CampaignForm from './CampaignForm';
+import { useAuth } from '../../contexts/AuthContext';
+import { useUI } from '../../contexts/UIContext';
+import {
+  createSurveyCampaign,
+  getCampaigns,
+  deleteCampaign,
+  sendCampaignInvitations
+} from '../../utils/surveyCampaigns';
+import { getCampaignStats } from '../../utils/surveyTokens';
 
 // Define types for our component
-type SurveyType = 'culture' | 'retention' | 'satisfaction';
-
 interface SurveyCampaign {
   id: string;
   name: string;
   description?: string;
-  surveyType: SurveyType;
+  surveyType: string;
   status: 'draft' | 'active' | 'completed' | 'expired';
   createdAt: Date;
   emailSubject: string;
   emailBody: string;
 }
 
-interface CampaignStats {
-  sent: number;
-  completed: number;
-  pending: number;
-  clicked: number;
-}
-
 interface CampaignManagementProps {
   clinicId?: string;
 }
-
-// Mock functions to simulate the functionality
-// In a real app, these would interact with your actual storage
-const createSurveyCampaign = (clinicId: string, data: Omit<SurveyCampaign, 'id' | 'status' | 'createdAt'>) => {
-  const newCampaign: SurveyCampaign = {
-    id: `campaign-${Date.now()}`,
-    status: 'draft',
-    createdAt: new Date(),
-    ...data
-  };
-  
-  // In a real app, save to storage here
-  console.log('Creating campaign:', newCampaign);
-  return newCampaign;
-};
-
-const getCampaigns = (clinicId: string): SurveyCampaign[] => {
-  // In a real app, fetch from storage
-  return []; // Return empty array for now
-};
-
-const deleteCampaign = (campaignId: string, clinicId: string): boolean => {
-  // In a real app, delete from storage
-  console.log('Deleting campaign:', campaignId);
-  return true;
-};
-
-const getCampaignStats = (campaignId: string): CampaignStats => {
-  // In a real app, calculate real stats
-  return {
-    sent: 0,
-    completed: 0,
-    pending: 0,
-    clicked: 0
-  };
-};
-
-const sendCampaignInvitations = async (campaignId: string, clinicId: string, emails: string[]) => {
-  // In a real app, send actual emails
-  console.log('Sending invitations for campaign', campaignId, 'to emails:', emails);
-  return { success: true, sent: emails.length, failed: 0 };
-};
 
 const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'default' }) => {
   // State variables
@@ -79,24 +37,12 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Mock UI context functions
-  const showSuccessToast = (message: string) => {
-    console.log('Success:', message);
-  };
-
-  const showErrorToast = (message: string) => {
-    console.error('Error:', message);
-  };
-
-  const confirm = async (options: { 
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    type?: 'danger' | 'warning' | 'info';
-  }) => {
-    return window.confirm(`${options.title}\n${options.message}`);
-  };
+  // Get UI context for toast notifications
+  const { showSuccessToast, showErrorToast, confirm } = useUI();
+  
+  // Get user context
+  const { user } = useAuth();
+  const effectiveClinicId = clinicId || user?.clinicId || 'default';
   
   // Load campaigns on component mount
   useEffect(() => {
@@ -104,7 +50,7 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
       setIsLoading(true);
       try {
         // Load campaigns from storage
-        const campaignsData = getCampaigns(clinicId);
+        const campaignsData = getCampaigns(effectiveClinicId);
         setCampaigns(campaignsData);
       } catch (error) {
         console.error('Error loading campaigns:', error);
@@ -115,13 +61,13 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
     };
     
     loadCampaigns();
-  }, [clinicId]);
+  }, [effectiveClinicId, showErrorToast]);
   
   // Create a new campaign
   const handleCreateCampaign = async (formData: {
     name: string;
     description: string;
-    surveyType: SurveyType;
+    surveyType: string;
     emailSubject: string;
     emailBody: string;
   }) => {
@@ -129,10 +75,10 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
     
     try {
       // Create the campaign
-      const campaign = createSurveyCampaign(clinicId, {
+      const campaign = createSurveyCampaign(effectiveClinicId, {
         name: formData.name.trim(),
-        description: formData.description.trim() || '',
-        surveyType: formData.surveyType,
+        description: formData.description.trim() || undefined,
+        surveyType: 'retention',
         emailSubject: formData.emailSubject.trim(),
         emailBody: formData.emailBody.trim()
       });
@@ -166,7 +112,7 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
     
     try {
       // Delete the campaign
-      const success = deleteCampaign(campaignId, clinicId);
+      const success = deleteCampaign(campaignId, effectiveClinicId);
       
       if (success) {
         // Update state by removing the deleted campaign
@@ -196,7 +142,7 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
     setIsSubmitting(true);
     
     try {
-      const result = await sendCampaignInvitations(campaignId, clinicId, emails);
+      const result = await sendCampaignInvitations(campaignId, effectiveClinicId, emails);
       
       if (result.success) {
         showSuccessToast(`Sent ${result.sent} invitations successfully!`);
@@ -206,7 +152,8 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
         setInviteEmails('');
         
         // Refresh campaigns list to reflect status changes
-        setCampaigns(getCampaigns(clinicId));
+        const updatedCampaigns = getCampaigns(effectiveClinicId);
+        setCampaigns(updatedCampaigns);
       } else {
         showErrorToast(`Failed to send invitations. Please try again.`);
       }
@@ -233,7 +180,7 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
       {/* New Campaign Form */}
       {showNewCampaign && (
         <div className="mb-6 p-4 border border-gray-200 rounded-lg">
-          <h3 className="text-md font-medium mb-4">Create New Campaign</h3>
+          <h3 className="text-md font-medium mb-4">Create New Retention Assessment Campaign</h3>
           <CampaignForm 
             onSubmit={handleCreateCampaign}
             onCancel={() => setShowNewCampaign(false)}
@@ -257,7 +204,7 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
             <Mail className="h-12 w-12 text-gray-400 mx-auto" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-1">No campaigns yet</h3>
-          <p className="text-gray-500 mb-4">Create your first survey campaign to get started</p>
+          <p className="text-gray-500 mb-4">Create your first retention assessment campaign to get started</p>
           <button
             onClick={() => setShowNewCampaign(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -343,7 +290,7 @@ const CampaignManagement: React.FC<CampaignManagementProps> = ({ clinicId = 'def
                 </div>
                 
                 <div className="text-xs text-gray-500">
-                  Created: {campaign.createdAt.toLocaleDateString()}
+                  Created: {new Date(campaign.createdAt).toLocaleDateString()}
                 </div>
                 
                 {/* Invite Form */}
