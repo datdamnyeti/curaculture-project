@@ -1,27 +1,19 @@
 // src/components/survey/SurveyRouter.tsx
 import React from 'react';
-import { SurveyType } from '../../data/surveyTypes';
-
-// Import only the RetentionSurveyForm
 import RetentionSurveyForm from './RetentionSurveyForm';
 
 interface SurveyRouterProps {
-  surveyType: SurveyType;
+  surveyType: string; // We'll keep this for future expansion
   onComplete?: (formValues: Record<string, any>) => void;
   initialValues?: Record<string, any>;
   isAnonymous?: boolean;
   demographicFields?: any[];
   campaignId?: string;
   token?: string;
-  hideCategories?: boolean; // We keep this for backward compatibility but no longer use it
 }
 
-/**
- * SurveyRouter component that routes to the appropriate survey form based on the surveyType
- * Now always randomizes questions while preserving category data for dashboard display
- */
 const SurveyRouter: React.FC<SurveyRouterProps> = ({
-  surveyType,
+  surveyType, // Keep this parameter but ignore it for now
   onComplete,
   initialValues = {},
   isAnonymous = false,
@@ -29,19 +21,18 @@ const SurveyRouter: React.FC<SurveyRouterProps> = ({
   campaignId,
   token
 }) => {
-  // Common props for all survey forms
-  const surveyProps = {
-    onComplete,
-    initialValues,
-    isAnonymous,
-    demographicFields,
-    campaignId,
-    token
-    // hideCategories prop is no longer needed as we always randomize and preserve categories
-  };
-  
-  // Always return the RetentionSurveyForm regardless of surveyType
-  return <RetentionSurveyForm {...surveyProps} />;
+  // For now, always return the RetentionSurveyForm
+  // In the future, we'll expand this to support multiple survey types
+  return (
+    <RetentionSurveyForm 
+      onComplete={onComplete}
+      initialValues={initialValues}
+      isAnonymous={isAnonymous}
+      demographicFields={demographicFields}
+      campaignId={campaignId}
+      token={token}
+    />
+  );
 };
 
 export default SurveyRouter;

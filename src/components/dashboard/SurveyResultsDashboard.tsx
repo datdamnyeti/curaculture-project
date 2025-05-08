@@ -6,7 +6,6 @@ import {
   getStrengthsAndImprovementAreas
 } from '../../utils/anonymousSurveyStorage';
 import { useAuth } from '../../contexts/AuthContext';
-import { RetentionSurveyStructure } from '../../data/retentionSurveyStructure';
 import { getCategoryName, getCategoryById } from '../../utils/categoryDescriptions';
 import InfoTooltip from '../ui/InfoTooltip';
 
@@ -24,9 +23,10 @@ interface StrengthsAreasType {
 
 interface SurveyResultsDashboardProps {
   clinicId?: string;
+  campaignId?: string;
 }
 
-const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicId }) => {
+const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicId, campaignId }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [responseCount, setResponseCount] = useState(0);
@@ -37,9 +37,7 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
     improvementAreas: [] 
   });
   
-  // Section IDs that match the RetentionSurveyStructure
-  // These IDs must match the exact section IDs used in categorizing question responses
-  // Updating them to match the exact IDs from the survey structure
+  // Retention survey section IDs - we're only focusing on retention now
   const sectionIds = [
     'fair_compensation',
     'team_relationships',
@@ -154,11 +152,11 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
   if (responseCount === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Assessment Results</h2>
+        <h2 className="text-xl font-semibold mb-4">Retention Assessment Results</h2>
         <div className="py-12 text-center">
           <div className="text-gray-500 mb-4">No survey responses yet</div>
           <p className="text-gray-600">
-            Once team members complete the assessment, results will appear here.
+            Once team members complete the retention assessment, results will appear here.
           </p>
         </div>
       </div>
@@ -168,7 +166,7 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
   return (
     <div className="bg-white rounded-lg shadow-md">
       <div className="p-6">
-        <h2 className="text-xl font-semibold mb-1">Assessment Results</h2>
+        <h2 className="text-xl font-semibold mb-1">Retention Assessment Results</h2>
         <p className="text-gray-500 mb-6">Based on {responseCount} anonymous responses</p>
         
         {/* Overall Score */}
@@ -233,7 +231,7 @@ const SurveyResultsDashboard: React.FC<SurveyResultsDashboardProps> = ({ clinicI
         
         {/* Section Scores */}
         <div className="mb-8">
-          <h3 className="text-lg font-medium mb-4">Assessment Categories</h3>
+          <h3 className="text-lg font-medium mb-4">Retention Assessment Categories</h3>
           <div className="grid gap-4">
             {sectionScores.map((section) => (
               <div key={section.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">

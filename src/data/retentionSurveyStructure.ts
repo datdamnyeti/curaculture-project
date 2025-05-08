@@ -1,5 +1,5 @@
 // src/data/retentionSurveyStructure.ts
-import { QuestionType } from '../components/SurveyQuestion';
+import { QuestionType } from '../components/survey/SurveyQuestion';
 
 // Export the survey structure as a named export
 export const RetentionSurveyStructure = {

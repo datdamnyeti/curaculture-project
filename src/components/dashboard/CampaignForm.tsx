@@ -1,27 +1,8 @@
 // src/components/dashboard/CampaignForm.tsx
 import React, { useState } from 'react';
 
-// Define survey types
-type SurveyType = 'culture' | 'retention' | 'satisfaction';
-
-// Default email templates for different survey types
-const defaultEmailTemplates: Record<SurveyType, string> = {
-  culture: `
-Dear Team Member,
-
-You are invited to participate in our practice culture assessment. Your feedback is important to us and will help identify areas where we can improve our workplace culture.
-
-The survey is anonymous and should take about 10-15 minutes to complete. Please click the link below to access the survey:
-
-{{surveyLink}}
-
-Thank you for your participation!
-
-Best regards,
-Practice Management Team
-`.trim(),
-
-  retention: `
+// Default email template for retention survey
+const defaultEmailTemplate = `
 Dear Team Member,
 
 We value your contributions to our practice and want to ensure we're creating an environment where you can thrive long-term. 
@@ -35,46 +16,21 @@ Thank you for your honest input.
 
 Best regards,
 Practice Management Team
-`.trim(),
+`.trim();
 
-  satisfaction: `
-Dear Client,
+// Default email subject for retention survey
+const defaultEmailSubject = 'Your Input Matters: Staff Retention Survey';
 
-Thank you for choosing our veterinary practice for your pet's care. We're committed to providing the best possible experience and would appreciate your feedback.
-
-Please take a moment to complete our satisfaction survey:
-{{surveyLink}}
-
-Your responses will help us continue to improve our services.
-
-Thank you,
-The Veterinary Team
-`.trim()
-};
-
-// Default email subjects for different survey types
-const defaultEmailSubjects: Record<SurveyType, string> = {
-  culture: 'Invitation to Participate in Practice Culture Survey',
-  retention: 'Your Input Matters: Staff Retention Survey',
-  satisfaction: 'Share Your Feedback: Pet Care Experience Survey'
-};
-
-// Get descriptions for survey types
-const getSurveyTypeDescription = (type: SurveyType): string => {
-  const descriptions: Record<SurveyType, string> = {
-    culture: 'Assess your practice culture and identify strengths and areas for improvement',
-    retention: 'Identify factors affecting staff retention and satisfaction',
-    satisfaction: 'Gather feedback from clients about their experience'
-  };
-  
-  return descriptions[type] || '';
+// Get description for retention survey
+const getRetentionSurveyDescription = (): string => {
+  return 'Identify factors affecting staff retention and satisfaction';
 };
 
 interface CampaignFormProps {
   onSubmit: (campaignData: {
     name: string;
     description: string;
-    surveyType: SurveyType;
+    surveyType: string;
     emailSubject: string;
     emailBody: string;
   }) => void;
@@ -87,13 +43,13 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
   onCancel,
   isSubmitting
 }) => {
-  // Form state - Set retention as the default for MVP
+  // Form state - Set retention as the default
   const [campaignData, setCampaignData] = useState({
     name: '',
     description: '',
-    surveyType: 'retention' as SurveyType,
-    emailSubject: defaultEmailSubjects.retention,
-    emailBody: defaultEmailTemplates.retention
+    surveyType: 'retention',
+    emailSubject: defaultEmailSubject,
+    emailBody: defaultEmailTemplate
   });
   
   // Handle input changes
@@ -102,19 +58,6 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
     setCampaignData(prev => ({
       ...prev,
       [name]: value
-    }));
-  };
-  
-  // Handle survey type change
-  const handleSurveyTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const surveyType = e.target.value as SurveyType;
-    
-    // Update survey type, subject, and email body template
-    setCampaignData(prev => ({
-      ...prev,
-      surveyType,
-      emailSubject: defaultEmailSubjects[surveyType],
-      emailBody: defaultEmailTemplates[surveyType]
     }));
   };
   
@@ -162,15 +105,14 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
         <select
           name="surveyType"
           value={campaignData.surveyType}
-          onChange={handleSurveyTypeChange}
+          onChange={handleChange}
           className="w-full px-3 py-2 border rounded-lg"
+          disabled // Locked to retention for now
         >
           <option value="retention">Retention Survey</option>
-          <option value="culture">Culture Assessment</option>
-          <option value="satisfaction">Client Satisfaction Survey</option>
         </select>
         <p className="text-xs text-gray-500 mt-1">
-          {getSurveyTypeDescription(campaignData.surveyType)}
+          {getRetentionSurveyDescription()}
         </p>
       </div>
       

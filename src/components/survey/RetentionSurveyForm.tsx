@@ -1,7 +1,7 @@
 // src/components/survey/RetentionSurveyForm.tsx
 import React, { useState, useEffect } from 'react';
 import { RetentionSurveyStructure } from '../../data/retentionSurveyStructure';
-import SurveyQuestion, { QuestionType } from '../SurveyQuestion';
+import SurveyQuestion, { QuestionType } from './SurveyQuestion';
 import { 
   validateForm, 
   ValidationErrors, 
@@ -20,7 +20,7 @@ import {
   saveSurveyProgress,
   AnonymousSurveyResponse
 } from '../../utils/anonymousSurveyStorage';
-import { getQuestionValidationRules } from '../SurveyQuestion';
+import { getQuestionValidationRules } from './SurveyQuestion';
 
 // Define types for survey sections and questions
 interface SurveyQuestion {
