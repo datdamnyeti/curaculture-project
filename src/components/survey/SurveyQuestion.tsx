@@ -1,6 +1,6 @@
 // src/components/SurveyQuestion.tsx
 import React from 'react';
-import { validationRules } from '../utils/validation';
+import { validationRules } from '../../utils/validation';
 
 // Question type definitions
 export type QuestionType = 
