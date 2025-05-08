@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Mail, Lock, Building, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { ViewType } from '../../utils/navigation';
 
 // Form data structure
 interface AuthFormData {
@@ -17,7 +18,7 @@ interface AuthFormData {
 interface AuthenticationViewProps {
   isLogin: boolean;
   setIsLogin: React.Dispatch<React.SetStateAction<boolean>>;
-  setCurrentView: React.Dispatch<React.SetStateAction<string>>;
+  setCurrentView: React.Dispatch<React.SetStateAction<ViewType>>;
 }
 
 const AuthenticationView: React.FC<AuthenticationViewProps> = ({
