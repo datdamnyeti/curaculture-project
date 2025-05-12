@@ -50,20 +50,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       
       // Calculate response rate (average of all campaign response rates)
       let responseRate = 0;
-      if (campaigns.length > 0) {
+      if (campaigns.length > 0 && allSurveys.length > 0) {
         const campaignRates = campaigns.map(c => getCampaignResponseRate(user.clinicId || '', c.id));
         responseRate = campaignRates.reduce((sum, rate) => sum + rate, 0) / campaignRates.length;
       }
       
-      // Calculate unique team members based on demographics
-      const uniqueRoles = new Set(allSurveys.map(s => s.demographics.role)).size;
-      const estimatedTeamSize = Math.max(
-        20, // Default size if we can't estimate
-        Math.round(allSurveys.reduce((sum, s) => sum + (s.demographics.teamSize || 0), 0) / Math.max(1, allSurveys.length))
-      );
+      // Calculate team size based on actual data, default to 0
+      let teamSize = 0;
+      if (allSurveys.length > 0) {
+        // Only calculate if we have actual survey data
+        const uniqueRoles = new Set(allSurveys.map(s => s.demographics.role)).size;
+        const calculatedSize = Math.round(
+          allSurveys.reduce((sum, s) => sum + (s.demographics.teamSize || 0), 0) / 
+          Math.max(1, allSurveys.length)
+        );
+        
+        teamSize = calculatedSize > 0 ? calculatedSize : 0;
+      }
       
       setDashboardStats({
-        teamMembers: estimatedTeamSize,
+        teamMembers: teamSize,
         responseRate: Math.round(responseRate),
         activeCampaigns: activeCampaigns
       });
@@ -178,4 +184,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
     </div>
   );
-};export default DashboardView;
+};
+
+export default DashboardView;
