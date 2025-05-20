@@ -144,7 +144,7 @@ const isSectionComplete = (
 };
 
 // Function to flatten and preserve category mapping in question IDs
-const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData): SurveyData => {
+const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData, shouldShuffle: boolean = true): SurveyData => {
   // First, create a flat array of all questions, but maintain their category ID in the question metadata
   const allQuestions: ExtendedSurveyQuestion[] = [];
   
@@ -164,8 +164,11 @@ const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData): SurveyData
     });
   });
   
-  // Randomize the order of questions
-  const shuffledQuestions = [...allQuestions].sort(() => Math.random() - 0.5);
+  // Only shuffle if shouldShuffle is true
+  let finalQuestions = [...allQuestions];
+  if (shouldShuffle) {
+    finalQuestions = finalQuestions.sort(() => Math.random() - 0.5);
+  }
   
   // Create a new survey structure with demographics first, then all randomized questions
   const newSurveyData: SurveyData = {
@@ -178,7 +181,7 @@ const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData): SurveyData
         id: 'all_questions', // Generic section ID
         title: 'Assessment Questions', // Generic section title
         description: 'Please answer the following questions about your workplace experience.',
-        questions: shuffledQuestions
+        questions: finalQuestions
       }
     ]
   };
@@ -215,13 +218,14 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [isSectionValid, setIsSectionValid] = useState(false);
   const [currentSurveyId, setCurrentSurveyId] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Prepare survey data based on props
   const [surveyData, setSurveyData] = useState<SurveyData>(RetentionSurveyStructure as unknown as SurveyData);
   
   // Update survey data - flatten and randomize questions while preserving category info
   useEffect(() => {
-    let updatedSurvey = {...surveyData};
+    let tempSurvey = {...surveyData};
     
     // Add demographic fields if provided
     if (demographicFields && demographicFields.length > 0) {
@@ -235,19 +239,25 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
         }))
       };
       
-      updatedSurvey = {
-        ...updatedSurvey,
+      tempSurvey = {
+        ...tempSurvey,
         sections: [
           customDemographicsSection,
-          ...updatedSurvey.sections.filter(section => section.id !== 'demographics')
+          ...tempSurvey.sections.filter(section => section.id !== 'demographics')
         ]
       };
     }
     
-    // Always flatten and randomize questions, preserving category associations for data collection
-    updatedSurvey = flattenAndPreserveCategoryQuestions(updatedSurvey);
-    setSurveyData(updatedSurvey);
-  }, [demographicFields, surveyData]);
+    // Only shuffle on initial load, not on subsequent renders
+    tempSurvey = flattenAndPreserveCategoryQuestions(tempSurvey, isInitialLoad);
+    
+    // Set that we're no longer on initial load
+    if (isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+    
+    setSurveyData(tempSurvey);
+  }, [demographicFields, surveyData, isInitialLoad]);
   
   // Create validation rules based on survey questions
   const buildValidationRules = (): ValidationRules => {
