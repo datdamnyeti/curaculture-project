@@ -113,17 +113,27 @@ const CuraCulture: React.FC = () => {
           <SurveyRouter 
             surveyType="retention"
             onComplete={(formValues) => {
+              // Save the organized responses (already organized in RetentionSurveyForm)
               setSurveyData(prev => ({
                 ...prev,
-                responses: formValues,
+                responses: formValues, // Already organized in RetentionSurveyForm
                 isComplete: true,
                 progress: 100
               }));
               
-              // Redirect to dashboard after completion
-              setTimeout(() => {
-                navigateToDashboard();
-              }, 2000);
+              // Save the data to persistent storage if user is authenticated
+              if (isAuthenticated && user?.id) {
+                saveSurveyData({
+                  currentSection: 0,
+                  currentSubsection: 0,
+                  responses: formValues,
+                  progress: 100,
+                  isComplete: true
+                }, user.id);
+              }
+              
+              // Redirect to dashboard immediately
+              navigateToDashboard();
             }}
             initialValues={surveyData.responses}
             isAnonymous={false}

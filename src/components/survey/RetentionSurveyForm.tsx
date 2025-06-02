@@ -278,6 +278,26 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   // Calculate survey progress
   const progress = calculateSurveyProgress(formValues, surveyData);
   
+  // Organize responses with section prefixes for dashboard compatibility
+  const organizeResponses = (): Record<string, any> => {
+    const organizedResponses: Record<string, any> = {};
+    
+    Object.keys(formValues).forEach(questionId => {
+      const allQuestions = surveyData.sections
+        .flatMap(section => section.questions as ExtendedSurveyQuestion[]);
+        
+      const question = allQuestions.find(q => q.id === questionId);
+      
+      if (question && 'originalSectionId' in question) {
+        organizedResponses[`${question.originalSectionId}_${questionId}`] = formValues[questionId];
+      } else {
+        organizedResponses[questionId] = formValues[questionId];
+      }
+    });
+    
+    return organizedResponses;
+  };
+  
   // Validate the current section continuously
   useEffect(() => {
     if (!currentSection) return;
@@ -533,25 +553,8 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
       // Get the appropriate clinic ID
       const clinicId = user?.clinicId || 'default';
       
-      // Organize responses by their original categories
-      const organizedResponses: Record<string, any> = {};
-      
-      // For each question response
-      Object.keys(formValues).forEach(questionId => {
-        // Find the question in our flattened survey data
-        const allQuestions = surveyData.sections
-          .flatMap(section => section.questions as ExtendedSurveyQuestion[]);
-          
-        const question = allQuestions.find(q => q.id === questionId);
-        
-        if (question && 'originalSectionId' in question) {
-          // Use the original section ID to organize responses for dashboard categorization
-          organizedResponses[`${question.originalSectionId}_${questionId}`] = formValues[questionId];
-        } else {
-          // For demographics or questions without category, use as-is
-          organizedResponses[questionId] = formValues[questionId];
-        }
-      });
+      // Use the helper function to organize responses
+      const organizedResponses = organizeResponses();
       
       // Create survey data object
       const surveyDataObj: Partial<AnonymousSurveyResponse> = {
@@ -652,25 +655,8 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
       // Get the appropriate clinic ID
       const clinicId = user?.clinicId || 'default';
       
-      // Organize responses by their original categories
-      const organizedResponses: Record<string, any> = {};
-      
-      // For each question response
-      Object.keys(formValues).forEach(questionId => {
-        // Find the question in our flattened survey data
-        const allQuestions = surveyData.sections
-          .flatMap(section => section.questions as ExtendedSurveyQuestion[]);
-          
-        const question = allQuestions.find(q => q.id === questionId);
-        
-        if (question && 'originalSectionId' in question) {
-          // Use the original section ID to organize responses for dashboard categorization
-          organizedResponses[`${question.originalSectionId}_${questionId}`] = formValues[questionId];
-        } else {
-          // For demographics or questions without category, use as-is
-          organizedResponses[questionId] = formValues[questionId];
-        }
-      });
+      // Use the helper function to organize responses
+      const organizedResponses = organizeResponses();
       
       // Create survey data object with properly categorized responses
       const surveyDataObj: Partial<AnonymousSurveyResponse> = {
@@ -716,8 +702,10 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
     return (
       <SurveyCompletionNotification
         onViewResults={() => {
-          // This would navigate to results view
-          window.location.href = '/results';
+          // Use the onComplete callback with properly organized data
+          if (onComplete) {
+            onComplete(organizeResponses());
+          }
         }}
         onStartNewSurvey={() => {
           // Reset the form and start over
@@ -729,8 +717,10 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
           setLastSavedAt(null);
         }}
         onReturnToDashboard={() => {
-          // This would navigate to dashboard
-          window.location.href = '/dashboard';
+          // Use the onComplete callback with properly organized data
+          if (onComplete) {
+            onComplete(organizeResponses());
+          }
         }}
         clinicName={clinicName}
         isAnonymous={isAnonymous}
