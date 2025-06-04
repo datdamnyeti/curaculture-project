@@ -11,6 +11,7 @@ import AuthenticationView from './auth/AuthenticationView';
 import DashboardView from './dashboard/DashboardView';
 import SurveyRouter from './survey/SurveyRouter';
 import SurveyResultsDashboard from './dashboard/SurveyResultsDashboard';
+import AppNavigation from './ui/AppNavigation'; // Add this import
 
 const CuraCulture: React.FC = () => {
   // Get authentication context
@@ -99,13 +100,24 @@ const CuraCulture: React.FC = () => {
         
       case 'dashboard':
         return (
-          <DashboardView 
-            user={user}
-            surveyData={surveyData}
-            onLogout={handleLogout}
-            onStartSurvey={navigateToSurvey}
-            onViewResults={navigateToResults}
-          />
+          <div className="min-h-screen bg-gray-50">
+            <AppNavigation
+              user={user}
+              currentPage="Dashboard"
+              onNavigateDashboard={() => {}} // Current page
+              onNavigateResults={navigateToResults}
+              onLogout={handleLogout}
+            />
+            <div className="max-w-7xl mx-auto p-6">
+              <DashboardView 
+                user={user}
+                surveyData={surveyData}
+                onLogout={handleLogout}
+                onStartSurvey={navigateToSurvey}
+                onViewResults={navigateToResults}
+              />
+            </div>
+          </div>
         );
         
       case 'survey':
@@ -142,7 +154,11 @@ const CuraCulture: React.FC = () => {
         
       case 'results':
         return (
-          <SurveyResultsDashboard clinicId={user?.clinicId} />
+          <SurveyResultsDashboard 
+            clinicId={user?.clinicId}
+            onNavigateDashboard={navigateToDashboard}
+            onLogout={handleLogout}
+          />
         );
         
       default:
