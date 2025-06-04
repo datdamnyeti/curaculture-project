@@ -143,46 +143,38 @@ const isSectionComplete = (
   return allRequiredFieldsHaveValues && hasNoErrors;
 };
 
-// FIXED: Function to flatten and preserve category mapping in question IDs
-const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData, shouldShuffle: boolean = true): SurveyData => {
-  // First, create a flat array of all questions, but maintain their category ID in the question metadata
-  const allQuestions: ExtendedSurveyQuestion[] = [];
-  
-  // Skip the demographics section when flattening
+// FIXED: Function to preserve category structure while allowing question randomization
+const preserveCategoryStructureWithRandomization = (surveyData: SurveyData, shouldShuffle: boolean = true): SurveyData => {
+  // Skip the demographics section when processing
   const demographicsSection = surveyData.sections.find(s => s.id === 'demographics');
   const nonDemographicSections = surveyData.sections.filter(s => s.id !== 'demographics');
   
-  // Get all questions except demographics, preserving section ID in the question properties
-  nonDemographicSections.forEach(section => {
-    section.questions.forEach(question => {
-      // FIXED: Store the original section ID in the question metadata
-      // This is the key fix - we preserve the ORIGINAL section ID, not the flattened one
-      allQuestions.push({
-        ...question,
-        originalSectionId: section.id // This keeps 'fair_compensation', 'team_relationships', etc.
-      });
-    });
+  // Process each section to add originalSectionId to questions and optionally shuffle within sections
+  const processedSections = nonDemographicSections.map(section => {
+    let sectionQuestions = section.questions.map(question => ({
+      ...question,
+      originalSectionId: section.id // Preserve original section ID for data storage
+    })) as ExtendedSurveyQuestion[];
+    
+    // Optionally shuffle questions within each section
+    if (shouldShuffle) {
+      sectionQuestions = sectionQuestions.sort(() => Math.random() - 0.5);
+    }
+    
+    return {
+      ...section,
+      questions: sectionQuestions
+    };
   });
   
-  // Only shuffle if shouldShuffle is true
-  let finalQuestions = [...allQuestions];
-  if (shouldShuffle) {
-    finalQuestions = finalQuestions.sort(() => Math.random() - 0.5);
-  }
-  
-  // Create a new survey structure with demographics first, then all randomized questions
+  // Create new survey structure maintaining section divisions
   const newSurveyData: SurveyData = {
     ...surveyData,
     sections: [
       // Keep demographics section if it exists
       ...(demographicsSection ? [demographicsSection] : []),
-      // Add a single section with all randomized questions, but NO category title
-      {
-        id: 'all_questions', // Generic section ID for UI purposes only
-        title: 'Assessment Questions', // Generic section title
-        description: 'Please answer the following questions about your workplace experience.',
-        questions: finalQuestions // Questions still have their originalSectionId preserved
-      }
+      // Keep all category sections but with questions that have originalSectionId preserved
+      ...processedSections
     ]
   };
   
@@ -249,7 +241,7 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
     }
     
     // Only shuffle on initial load, not on subsequent renders
-    tempSurvey = flattenAndPreserveCategoryQuestions(tempSurvey, isInitialLoad);
+    tempSurvey = preserveCategoryStructureWithRandomization(tempSurvey, isInitialLoad);
     
     // Set that we're no longer on initial load
     if (isInitialLoad) {
