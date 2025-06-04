@@ -345,33 +345,62 @@ export const getStrengthsAndImprovementAreas = (
   clinicId: string,
   campaignId?: string
 ): { strengths: string[]; improvementAreas: string[] } => {
-  const sectionIds = ['purpose', 'wellbeing', 'leadership'];
+  // FIXED: Use all 10 section IDs that match the survey structure
+  const sectionIds = [
+    'fair_compensation',
+    'team_relationships',
+    'work_life_balance', 
+    'practice_environment',
+    'leadership_quality',
+    'moral_ethical_alignment',
+    'psychological_safety',
+    'career_development',
+    'purpose_meaning',
+    'organizational_justice'
+  ];
+  
   const sectionScores = getAggregatedSectionScores(clinicId, sectionIds, { campaignId });
   
-  // Sort sections by score
+  // Sort sections by score (highest to lowest)
   const sortedSections = Object.entries(sectionScores)
     .sort((a, b) => b[1] - a[1]);
   
-  // Top third are strengths, bottom third are improvement areas
-  const numSections = sortedSections.length;
-  const strengthsCount = Math.ceil(numSections / 3);
-  
-  // Map section IDs to human-readable names
+  // FIXED: Map section IDs to the exact human-readable names used in dashboard
   const sectionNames: Record<string, string> = {
-    purpose: 'Sense of Purpose',
-    wellbeing: 'Team Wellbeing',
-    leadership: 'Practice Leadership'
+    fair_compensation: 'Fair Compensation',
+    team_relationships: 'Team Relationships and Camaraderie', 
+    work_life_balance: 'Work-Life Balance',
+    practice_environment: 'Practice Environment',
+    leadership_quality: 'Leadership Quality',
+    moral_ethical_alignment: 'Values Alignment',
+    psychological_safety: 'Psychological Safety',
+    career_development: 'Career Development',
+    purpose_meaning: 'Sense of Purpose',
+    organizational_justice: 'Organizational Justice'
   };
   
+  // Strengths: Categories scoring 5.5 or higher
   const strengths = sortedSections
-    .slice(0, strengthsCount)
+    .filter(([id, score]) => score >= 5.5)
     .map(([id, _]) => sectionNames[id] || id);
-    
-  const improvementAreas = sortedSections
-    .slice(-strengthsCount)
+  
+  // Improvement Areas: Categories scoring below 4.0
+  let improvementAreas = sortedSections
+    .filter(([id, score]) => score < 4.0)
     .map(([id, _]) => sectionNames[id] || id);
-    
-  return { strengths, improvementAreas };
+  
+  // If no categories are critically low, take the bottom 3
+  if (improvementAreas.length === 0) {
+    improvementAreas = sortedSections
+      .slice(-3)
+      .reverse()
+      .map(([id, _]) => sectionNames[id] || id);
+  }
+  
+  return { 
+    strengths: strengths.slice(0, 5), 
+    improvementAreas: improvementAreas.slice(0, 5)
+  };
 };
 
 /**
