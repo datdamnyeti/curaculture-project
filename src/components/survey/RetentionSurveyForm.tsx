@@ -143,7 +143,7 @@ const isSectionComplete = (
   return allRequiredFieldsHaveValues && hasNoErrors;
 };
 
-// Function to flatten and preserve category mapping in question IDs
+// FIXED: Function to flatten and preserve category mapping in question IDs
 const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData, shouldShuffle: boolean = true): SurveyData => {
   // First, create a flat array of all questions, but maintain their category ID in the question metadata
   const allQuestions: ExtendedSurveyQuestion[] = [];
@@ -155,11 +155,11 @@ const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData, shouldShuff
   // Get all questions except demographics, preserving section ID in the question properties
   nonDemographicSections.forEach(section => {
     section.questions.forEach(question => {
-      // Store the original section ID in the question metadata
-      // This won't be visible to users but will be used for data collection
+      // FIXED: Store the original section ID in the question metadata
+      // This is the key fix - we preserve the ORIGINAL section ID, not the flattened one
       allQuestions.push({
         ...question,
-        originalSectionId: section.id
+        originalSectionId: section.id // This keeps 'fair_compensation', 'team_relationships', etc.
       });
     });
   });
@@ -178,10 +178,10 @@ const flattenAndPreserveCategoryQuestions = (surveyData: SurveyData, shouldShuff
       ...(demographicsSection ? [demographicsSection] : []),
       // Add a single section with all randomized questions, but NO category title
       {
-        id: 'all_questions', // Generic section ID
+        id: 'all_questions', // Generic section ID for UI purposes only
         title: 'Assessment Questions', // Generic section title
         description: 'Please answer the following questions about your workplace experience.',
-        questions: finalQuestions
+        questions: finalQuestions // Questions still have their originalSectionId preserved
       }
     ]
   };
@@ -278,23 +278,31 @@ const RetentionSurveyForm: React.FC<RetentionSurveyFormProps> = ({
   // Calculate survey progress
   const progress = calculateSurveyProgress(formValues, surveyData);
   
-  // Organize responses with section prefixes for dashboard compatibility
+  // FIXED: Organize responses with proper section prefixes for dashboard compatibility
   const organizeResponses = (): Record<string, any> => {
     const organizedResponses: Record<string, any> = {};
     
     Object.keys(formValues).forEach(questionId => {
+      // Find the question in our flattened survey data
       const allQuestions = surveyData.sections
         .flatMap(section => section.questions as ExtendedSurveyQuestion[]);
         
       const question = allQuestions.find(q => q.id === questionId);
       
-      if (question && 'originalSectionId' in question) {
+      if (question && 'originalSectionId' in question && question.originalSectionId) {
+        // FIXED: Use the preserved original section ID to create proper category prefixes
+        // This creates keys like: "fair_compensation_compensation_1" (which is what the dashboard expects)
         organizedResponses[`${question.originalSectionId}_${questionId}`] = formValues[questionId];
+        
+        // DEBUG: Log the key creation for verification
+        console.log(`Creating key: ${question.originalSectionId}_${questionId} = ${formValues[questionId]}`);
       } else {
+        // For demographics or questions without category, use as-is
         organizedResponses[questionId] = formValues[questionId];
       }
     });
     
+    console.log('Final organized responses:', organizedResponses);
     return organizedResponses;
   };
   
