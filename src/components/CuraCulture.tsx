@@ -1,4 +1,4 @@
-// src/components/CuraCulture.tsx
+// src/components/CuraCulture.tsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUI } from '../contexts/UIContext';
@@ -11,7 +11,7 @@ import AuthenticationView from './auth/AuthenticationView';
 import DashboardView from './dashboard/DashboardView';
 import SurveyRouter from './survey/SurveyRouter';
 import SurveyResultsDashboard from './dashboard/SurveyResultsDashboard';
-import AppNavigation from './ui/AppNavigation'; // Add this import
+import AppNavigation from './ui/AppNavigation';
 
 const CuraCulture: React.FC = () => {
   // Get authentication context
@@ -64,7 +64,27 @@ const CuraCulture: React.FC = () => {
     }
   };
   
+  // FIXED: Clear survey data when starting a new survey
   const navigateToSurvey = () => {
+    console.log('Starting new survey - clearing previous data');
+    
+    // Reset survey data to empty state
+    const emptySurveyData = {
+      currentSection: 0,
+      currentSubsection: 0,
+      responses: {}, // CRITICAL: Empty responses object
+      progress: 0,
+      isComplete: false
+    };
+    
+    setSurveyData(emptySurveyData);
+    
+    // Also clear from persistent storage to prevent reload issues
+    if (isAuthenticated && user?.id) {
+      saveSurveyData(emptySurveyData, user.id);
+    }
+    
+    // Navigate to survey view
     setCurrentView('survey');
   };
   
@@ -74,6 +94,14 @@ const CuraCulture: React.FC = () => {
   
   const handleLogout = () => {
     logout();
+    // FIXED: Also clear survey data on logout
+    setSurveyData({
+      currentSection: 0,
+      currentSubsection: 0,
+      responses: {},
+      progress: 0,
+      isComplete: false
+    });
     setCurrentView('landing');
     showSuccessToast('You have been logged out successfully');
   };
@@ -113,7 +141,7 @@ const CuraCulture: React.FC = () => {
                 user={user}
                 surveyData={surveyData}
                 onLogout={handleLogout}
-                onStartSurvey={navigateToSurvey}
+                onStartSurvey={navigateToSurvey} // This will now clear data first
                 onViewResults={navigateToResults}
               />
             </div>
@@ -121,33 +149,33 @@ const CuraCulture: React.FC = () => {
         );
         
       case 'survey':
+        console.log('Rendering survey with initial values:', surveyData.responses);
         return (
           <SurveyRouter 
             surveyType="retention"
             onComplete={(formValues) => {
+              console.log('Survey completed with values:', formValues);
+              
               // Save the organized responses (already organized in RetentionSurveyForm)
-              setSurveyData(prev => ({
-                ...prev,
+              const completedSurveyData = {
+                currentSection: 0,
+                currentSubsection: 0,
                 responses: formValues, // Already organized in RetentionSurveyForm
                 isComplete: true,
                 progress: 100
-              }));
+              };
+              
+              setSurveyData(completedSurveyData);
               
               // Save the data to persistent storage if user is authenticated
               if (isAuthenticated && user?.id) {
-                saveSurveyData({
-                  currentSection: 0,
-                  currentSubsection: 0,
-                  responses: formValues,
-                  progress: 100,
-                  isComplete: true
-                }, user.id);
+                saveSurveyData(completedSurveyData, user.id);
               }
               
               // Redirect to dashboard immediately
               navigateToDashboard();
             }}
-            initialValues={surveyData.responses}
+            initialValues={surveyData.responses} // Now this will be empty {} for new surveys
             isAnonymous={false}
           />
         );
