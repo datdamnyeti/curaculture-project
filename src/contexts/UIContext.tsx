@@ -1,6 +1,8 @@
 // src/contexts/UIContext.tsx
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import ToastContainer, { toast, ToastData } from '../components/ui/ToastContainer';
+// Toasts and confirmation dialogs. The previous version built toast objects
+// but never stored them, so nothing ever appeared on screen.
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import ToastContainer, { ToastData } from '../components/ui/ToastContainer';
 import ConfirmationDialog from '../components/ui/ConfirmationDialog';
 
 interface ConfirmationOptions {
@@ -11,144 +13,75 @@ interface ConfirmationOptions {
   type?: 'danger' | 'warning' | 'info';
 }
 
+type ShowToast = (message: string, duration?: number) => void;
+
 interface UIContextType {
-  // Global loading state
-  isLoading: boolean;
-  setIsLoading: (isLoading: boolean) => void;
-  startLoading: () => void;
-  stopLoading: () => void;
-  
-  // Toast notifications
-  showToast: typeof toast.show;
-  showSuccessToast: typeof toast.success;
-  showErrorToast: typeof toast.error;
-  showInfoToast: typeof toast.info;
-  showWarningToast: typeof toast.warning;
-  
-  // Confirmation dialogs
+  showSuccessToast: ShowToast;
+  showErrorToast: ShowToast;
+  showInfoToast: ShowToast;
+  showWarningToast: ShowToast;
   confirm: (options: ConfirmationOptions) => Promise<boolean>;
 }
 
-// Create context with default values
+const noop: ShowToast = () => {};
 const UIContext = createContext<UIContextType>({
-  isLoading: false,
-  setIsLoading: () => {},
-  startLoading: () => {},
-  stopLoading: () => {},
-  
-  showToast: toast.show,
-  showSuccessToast: toast.success,
-  showErrorToast: toast.error,
-  showInfoToast: toast.info,
-  showWarningToast: toast.warning,
-  
+  showSuccessToast: noop,
+  showErrorToast: noop,
+  showInfoToast: noop,
+  showWarningToast: noop,
   confirm: async () => false,
 });
 
-// Custom hook to use the UI context
 export const useUI = () => useContext(UIContext);
 
-// UI Provider component
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Global loading state
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const startLoading = useCallback(() => setIsLoading(true), []);
-  const stopLoading = useCallback(() => setIsLoading(false), []);
-  
-  // Confirmation dialog state
-  const [confirmationState, setConfirmationState] = useState<{
-    isOpen: boolean;
-    options: ConfirmationOptions;
-    resolve: (value: boolean) => void;
-  }>({
-    isOpen: false,
-    options: {
-      title: '',
-      message: '',
-    },
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+  const counter = useRef(0);
+
+  const push = useCallback((type: ToastData['type'], fallback: number) => (message: string, duration = fallback) => {
+    counter.current += 1;
+    const id = `${Date.now()}-${counter.current}`;
+    setToasts((t) => [...t, { id, message, type, duration }]);
+  }, []);
+
+  const dismiss = useCallback((id: string) => setToasts((t) => t.filter((x) => x.id !== id)), []);
+
+  const [dialog, setDialog] = useState<{ open: boolean; options: ConfirmationOptions; resolve: (v: boolean) => void }>({
+    open: false,
+    options: { title: '', message: '' },
     resolve: () => {},
   });
-  
-  // Show confirmation dialog and return a promise
-  const confirm = useCallback((options: ConfirmationOptions) => {
-    return new Promise<boolean>((resolve) => {
-      setConfirmationState({
-        isOpen: true,
-        options,
-        resolve,
-      });
-    });
-  }, []);
-  
-  // Handle confirmation dialog close
-  const handleCloseConfirmation = useCallback(() => {
-    setConfirmationState((prev) => ({
-      ...prev,
-      isOpen: false,
-    }));
-    confirmationState.resolve(false);
-  }, [confirmationState]);
-  
-  // Handle confirmation
-  const handleConfirm = useCallback(() => {
-    confirmationState.resolve(true);
-    setConfirmationState((prev) => ({
-      ...prev,
-      isOpen: false,
-    }));
-  }, [confirmationState]);
-  
-  // Toast notification methods
-  const showToast = useCallback(toast.show, []);
-  const showSuccessToast = useCallback(toast.success, []);
-  const showErrorToast = useCallback(toast.error, []);
-  const showInfoToast = useCallback(toast.info, []);
-  const showWarningToast = useCallback(toast.warning, []);
-  
-  // Create context value
-  const contextValue: UIContextType = {
-    isLoading,
-    setIsLoading,
-    startLoading,
-    stopLoading,
-    
-    showToast,
-    showSuccessToast,
-    showErrorToast,
-    showInfoToast,
-    showWarningToast,
-    
+
+  const confirm = useCallback(
+    (options: ConfirmationOptions) => new Promise<boolean>((resolve) => setDialog({ open: true, options, resolve })),
+    [],
+  );
+  const close = (answer: boolean) => {
+    dialog.resolve(answer);
+    setDialog((d) => ({ ...d, open: false }));
+  };
+
+  const value: UIContextType = {
+    showSuccessToast: push('success', 3000),
+    showErrorToast: push('error', 6000),
+    showInfoToast: push('info', 3000),
+    showWarningToast: push('warning', 4000),
     confirm,
   };
-  
+
   return (
-    <UIContext.Provider value={contextValue}>
-      {/* Global loading overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-75 z-50">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-            <p className="mt-2 text-gray-700 font-medium">Loading...</p>
-          </div>
-        </div>
-      )}
-      
-      {/* Toast container for notifications */}
-      <ToastContainer />
-      
-      {/* Confirmation dialog */}
+    <UIContext.Provider value={value}>
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
       <ConfirmationDialog
-        isOpen={confirmationState.isOpen}
-        onClose={handleCloseConfirmation}
-        onConfirm={handleConfirm}
-        title={confirmationState.options.title}
-        message={confirmationState.options.message}
-        confirmText={confirmationState.options.confirmText}
-        cancelText={confirmationState.options.cancelText}
-        type={confirmationState.options.type}
+        isOpen={dialog.open}
+        onClose={() => close(false)}
+        onConfirm={() => close(true)}
+        title={dialog.options.title}
+        message={dialog.options.message}
+        confirmText={dialog.options.confirmText}
+        cancelText={dialog.options.cancelText}
+        type={dialog.options.type}
       />
-      
       {children}
     </UIContext.Provider>
   );

@@ -13,41 +13,6 @@ interface ToastContainerProps {
   onDismiss: (id: string) => void;
 }
 
-export const toast = {
-  success: (message: string, duration = 3000) => {
-    return {
-      id: Date.now().toString(),
-      message,
-      type: 'success' as const,
-      duration,
-    };
-  },
-  error: (message: string, duration = 5000) => {
-    return {
-      id: Date.now().toString(),
-      message,
-      type: 'error' as const,
-      duration,
-    };
-  },
-  warning: (message: string, duration = 4000) => {
-    return {
-      id: Date.now().toString(),
-      message,
-      type: 'warning' as const,
-      duration,
-    };
-  },
-  info: (message: string, duration = 3000) => {
-    return {
-      id: Date.now().toString(),
-      message,
-      type: 'info' as const,
-      duration,
-    };
-  },
-};
-
 const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismiss }) => {
   // Add a safety check for toasts
   const safeToasts = Array.isArray(toasts) ? toasts : [];
