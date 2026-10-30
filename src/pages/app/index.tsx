@@ -25,7 +25,7 @@ function Surveys({ clinic, canEdit }: { clinic: Clinic; canEdit: boolean }) {
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><p className="eyebrow">{clinic.name}</p><h1 className="text-2xl font-bold">Surveys</h1>
+        <div><p className="eyebrow">{clinic.name}</p><h1 className="text-2xl font-semibold tracking-tight">Surveys</h1>
           <p className="text-sm text-slate-600">Each person gets a single-use link by email or text. Answers are stored with no link to who gave them.</p></div>
         {canEdit && !creating && <button className="btn btn-primary" onClick={() => setCreating(true)}>Send a survey</button>}
       </div>

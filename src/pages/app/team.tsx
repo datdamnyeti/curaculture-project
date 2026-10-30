@@ -44,7 +44,7 @@ function Team({ canEdit }: { canEdit: boolean }) {
   const n = list?.length ?? 0, email = list?.filter((e) => e.email).length ?? 0, text = list?.filter((e) => !e.email && e.phone).length ?? 0;
   return (
     <>
-      <div><p className="eyebrow">Headcount</p><h1 className="text-2xl font-bold">Team · {n} {n === 1 ? 'person' : 'people'}</h1>
+      <div><p className="eyebrow">Headcount</p><h1 className="text-2xl font-semibold tracking-tight">Team · {n} {n === 1 ? 'person' : 'people'}</h1>
         <p className="text-sm text-slate-600">Everyone who should get the survey, including part-time and relief staff. {email} by email · {text} by text · {n - email - text} with neither.</p></div>
       {canEdit && (
         <div className="grid gap-5 md:grid-cols-2">

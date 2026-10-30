@@ -3,18 +3,19 @@
 @tailwind utilities;
 
 @layer base {
-  body { @apply bg-slate-50 text-brand-ink antialiased; }
-  h1, h2, h3 { text-wrap: balance; }
+  body { @apply bg-canvas font-sans text-brand-ink antialiased; }
+  h1, h2, h3 { @apply font-semibold tracking-heading; text-wrap: balance; }
 }
 
 @layer components {
-  .card { @apply rounded-xl border border-slate-200 bg-white p-5; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50; }
+  .card { @apply rounded-xl border border-line bg-white p-5; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-[9px] border border-line bg-white px-4 py-2 text-sm font-medium hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50; }
   .btn-primary { @apply border-brand bg-brand text-white hover:border-brand-dark hover:bg-brand-dark; }
+  .btn-ink { @apply border-brand-ink bg-brand-ink text-white hover:bg-black; }
   .btn-ghost { @apply border-transparent bg-transparent text-brand hover:border-transparent hover:underline; }
   .field { @apply flex flex-col gap-1 text-sm; }
   .field > span { @apply font-medium text-slate-600; }
-  .input { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-soft; }
-  .eyebrow { @apply text-xs font-semibold uppercase tracking-wider text-slate-500; }
+  .input { @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-soft; }
+  .eyebrow { @apply text-sm font-medium text-slate-500; }
   .note { @apply rounded-lg bg-brand-soft px-4 py-3 text-sm; }
 }

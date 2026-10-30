@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabaseBrowser';
 import { useSession } from '@/contexts/SessionContext';
-import { Logo } from '@/components/layout/AppShell';
+import { Wordmark } from '@/components/brand/Logo';
 
 type Mode = 'signin' | 'signup' | 'reset' | 'update' | 'sent';
 
@@ -54,9 +54,9 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen flex-col items-center gap-5 px-4 py-10">
-      <Link href="/" className="flex items-center gap-2 text-lg font-bold"><Logo />CuraCulture</Link>
+      <Link href="/" aria-label="CuraCulture home"><Wordmark /></Link>
       <form onSubmit={submit} className="card flex w-full max-w-md flex-col gap-4 sm:p-7">
-        <div><h1 className="text-2xl font-bold">{titles[mode]}</h1>
+        <div><h1 className="text-2xl font-semibold tracking-tight">{titles[mode]}</h1>
           {mode === 'signin' && <p className="text-sm text-slate-600">For practice owners, managers and medical directors.</p>}
           {mode === 'signup' && <p className="text-sm text-slate-600">You’ll set up your clinic and team next. Staff never need accounts.</p>}</div>
         {mode === 'sent' ? <p className="text-slate-700">{msg}</p> : (
