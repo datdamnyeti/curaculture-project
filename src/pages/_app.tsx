@@ -1,18 +1,21 @@
 // src/pages/_app.tsx
 import React from 'react';
 import type { AppProps } from 'next/app';
+import Head from 'next/head';
 import { UIProvider } from '../contexts/UIContext';
-import { AuthProvider } from '../contexts/AuthContext';
+import { SessionProvider } from '../contexts/SessionContext';
 import '../styles/globals.css';
 
-function MyApp({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps }: AppProps) {
   return (
     <UIProvider>
-      <AuthProvider>
+      <SessionProvider>
+        <Head>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>CuraCulture</title>
+        </Head>
         <Component {...pageProps} />
-      </AuthProvider>
+      </SessionProvider>
     </UIProvider>
   );
 }
-
-export default MyApp;
