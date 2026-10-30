@@ -3,6 +3,7 @@ import { api, ADMIN_ROLES, HttpError, requireClinic, requireUser } from '@/lib/s
 import { rpc, supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { campaignCounts, createCampaign, Recipient } from '@/lib/server/surveyService';
 import { deliver } from '@/lib/server/deliver';
+import { CURRENT_VERSION, FIELDABLE } from '@/lib/instrument';
 
 export default api({
   async GET(req, res) {
@@ -24,6 +25,8 @@ export default api({
     if (!name) throw new HttpError(400, 'Name the survey.');
     if (!closesOn || closesOn < new Date().toISOString().slice(0, 10)) throw new HttpError(400, 'Pick a closing date that hasn’t passed.');
     if (!Array.isArray(ids) || ids.some((x) => typeof x !== 'string')) throw new HttpError(400, 'Choose who gets the survey.');
+    const version = typeof req.body?.version === 'string' ? req.body.version : CURRENT_VERSION;
+    if (!FIELDABLE.some((f) => f.version === version)) throw new HttpError(400, 'Choose a survey version.');
 
     const { data: emps, error } = await supabaseAdmin().from('employees').select('id, name, email, phone')
       .eq('clinic_id', clinicId).eq('active', true).in('id', ids as string[]);
@@ -32,7 +35,7 @@ export default api({
     const reachable = recipients.filter((r) => r.email || r.phone);
     if (reachable.length < 5) throw new HttpError(400, 'Choose at least 5 people with an email or mobile number, so results can be shown.');
 
-    const created = await createCampaign(rpc, { clinicId, name, closesOn, createdBy: user.id, recipients });
+    const created = await createCampaign(rpc, { clinicId, name, closesOn, createdBy: user.id, recipients, version });
     const { data: clinic } = await supabaseAdmin().from('clinics').select('name, survey_intro').eq('id', clinicId).single();
     const report = await deliver(created.invitations, { clinicName: clinic!.name, intro: clinic!.survey_intro, closesOn });
     res.status(201).json({ campaignId: created.campaignId, ...report, unreachable: created.unreachable.map((u) => u.name) });
