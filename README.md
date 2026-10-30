@@ -16,7 +16,9 @@ analysis rules.
 | Email (Resend) and text (Twilio) delivery | `src/lib/server/notify.ts`, `deliver.ts` |
 | Staff survey page | `src/pages/s/[token].tsx` |
 | Owner app: surveys, results, team, settings | `src/pages/app/` |
-| Sign-in, landing page, staff privacy page | `src/pages/login.tsx`, `index.tsx`, `privacy.tsx` |
+| Sign-in, landing page (design J), staff privacy page | `src/pages/login.tsx`, `index.tsx`, `privacy.tsx` |
+| Logo (stage ring) and wordmark | `src/components/brand/Logo.tsx`, `public/logo.svg` |
+| "Book a demo" requests from the landing page | `src/pages/api/demo-request.ts`, `src/lib/demoRequest.ts`, `demo_requests` table |
 | API routes | `src/pages/api/` |
 | Tests, including SQL tests on real Postgres (PGlite) | `tests/` |
 
@@ -47,11 +49,18 @@ distribution on the 1–6 scale. Reverse items (TC1, WR2, GD3) are recoded
 leave (IL1–IL3) are reported separately. Written answers reach owners only as
 researcher-approved quotes, or not at all in self-serve clinics.
 
+## Look and feel
+
+Design J: Geist and Geist Mono (the `geist` package, loaded with `next/font`), near-black
+text on white and pale grey, and one brand colour (`brand`, #1b6984) for buttons, links and
+highlights. The six-step response scale colours are used only inside results. The logo is a
+ring of four arcs for the pathway's stages: Measure, Plan, Change, Sustain.
+
 ## Run it locally
 
 1. Create a Supabase project (or run `supabase start` with the Supabase CLI).
-2. Apply the migration: `supabase db push`, or paste
-   `supabase/migrations/20261029000000_v21_survey_loop.sql` into the SQL editor.
+2. Apply the migrations: `supabase db push`, or paste each file in
+   `supabase/migrations/` into the SQL editor, oldest first.
 3. In Supabase → Authentication → URL configuration, add
    `http://localhost:3000/app` and `http://localhost:3000/login` as redirect URLs.
 4. `cp .env.example .env.local` and fill in the Supabase keys and a

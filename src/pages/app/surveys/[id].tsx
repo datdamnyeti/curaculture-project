@@ -65,7 +65,7 @@ function View({ canEdit }: { canEdit: boolean }) {
       <Link href="/app" className="text-sm text-brand">← All surveys</Link>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><p className="eyebrow">Practice Assessment · {c.instrument_version} · {c.status === 'active' ? `collecting until ${fmtDate(c.closes_on)}` : `closed ${fmtDate(c.closes_on)}`}</p>
-          <h1 className="text-2xl font-bold">{c.name}</h1></div>
+          <h1 className="text-2xl font-semibold tracking-tight">{c.name}</h1></div>
         {canEdit && c.status === 'active' && <div className="flex gap-2"><button className="btn" onClick={remind}>Send reminder</button><button className="btn btn-ghost" onClick={close}>Close survey</button></div>}
       </div>
 
@@ -168,7 +168,7 @@ function View({ canEdit }: { canEdit: boolean }) {
 }
 
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return <div className="flex flex-col gap-0.5 bg-white p-4"><span className="eyebrow">{label}</span><span className="text-2xl font-bold">{value}</span><span className="text-xs text-slate-500">{sub}</span></div>;
+  return <div className="flex flex-col gap-0.5 bg-white p-4"><span className="eyebrow">{label}</span><span className="text-2xl font-semibold tracking-tight">{value}</span><span className="text-xs text-slate-500">{sub}</span></div>;
 }
 
 function Row({ name, bar, mean, fav, thin }: { name: React.ReactNode; bar: React.ReactNode; mean: number | null; fav: number; thin?: boolean }) {

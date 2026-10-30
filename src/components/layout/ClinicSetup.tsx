@@ -19,7 +19,7 @@ export default function ClinicSetup({ onCreated }: { onCreated: () => void }) {
 
   return (
     <form onSubmit={submit} className="card mx-auto flex w-full max-w-xl flex-col gap-4">
-      <div className="flex flex-col gap-1"><h1 className="text-2xl font-bold">Set up your clinic</h1>
+      <div className="flex flex-col gap-1"><h1 className="text-2xl font-semibold tracking-tight">Set up your clinic</h1>
         <p className="text-sm text-slate-600">Used to describe your results. Staff are never asked these questions.</p></div>
       <label className="field"><span>Clinic name</span><input className="input" value={f.name} onChange={set('name')} required /></label>
       <div className="grid gap-4 sm:grid-cols-2">

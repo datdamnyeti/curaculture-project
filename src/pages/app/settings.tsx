@@ -24,7 +24,7 @@ function Settings({ clinic, canEdit, reload }: { clinic: Clinic; canEdit: boolea
   );
   return (
     <>
-      <div><p className="eyebrow">Settings</p><h1 className="text-2xl font-bold">{clinic.name}</h1></div>
+      <div><p className="eyebrow">Settings</p><h1 className="text-2xl font-semibold tracking-tight">{clinic.name}</h1></div>
       <form className="card flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); save(f, 'Clinic facts saved.'); }}>
         <h2 className="font-semibold">Clinic facts</h2>
         <div className="grid gap-4 sm:grid-cols-2">

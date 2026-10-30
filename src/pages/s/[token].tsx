@@ -102,7 +102,7 @@ export default function SurveyPage() {
 function Message({ title, body }: { title: string; body?: string }) {
   return (
     <div className="card flex flex-col gap-3 text-center sm:p-8">
-      <h1 className="text-2xl font-bold">{title}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       {body && <p className="text-slate-600">{body}</p>}
       <p className="text-xs text-slate-500"><Link className="underline" href="/privacy">How your answers are protected</Link></p>
     </div>
@@ -128,7 +128,7 @@ function Survey({ inst, intro, clinic, page, a, setA, onNext, onBack, onLater, o
     return (
       <div className="card flex flex-col gap-5 sm:p-8">
         <span className="eyebrow">{clinic}</span>
-        <h1 className="text-2xl font-bold">{inst.name}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{inst.name}</h1>
         <p className="leading-relaxed">{inst.intro[intro]}</p>
         <p className="note">Every question is optional. You can stop at any point and come back with the same link. <Link className="font-medium text-brand underline" href="/privacy">How your answers are protected</Link></p>
         <button className="btn btn-primary self-start px-6 py-3 text-base" onClick={onNext}>Start</button>
