@@ -2,7 +2,7 @@
 // against a real Postgres. All persistence goes through the SQL functions in
 // supabase/migrations, which enforce the order "write the response, then mark
 // the invitation complete" inside one transaction.
-import { getInstrument, CURRENT_VERSION } from '../instrument';
+import { getInstrument, CURRENT_VERSION, FIELDABLE } from '../instrument';
 import { buildResults, Results, StoredResponse } from '../scoring';
 import { cleanDraft, cleanSubmission } from '../validate';
 import { hashToken, isWellFormed, newInvitationId, tokenFor } from './tokens';
@@ -123,8 +123,10 @@ export interface PreparedInvitation {
 
 export async function createCampaign(
   rpc: Rpc,
-  args: { clinicId: string; name: string; closesOn: string; createdBy: string | null; recipients: Recipient[]; secret?: string },
+  args: { clinicId: string; name: string; closesOn: string; createdBy: string | null; recipients: Recipient[]; secret?: string; version?: string },
 ): Promise<{ campaignId: string; invitations: PreparedInvitation[]; unreachable: Recipient[] }> {
+  const version = args.version ?? CURRENT_VERSION;
+  if (!FIELDABLE.some((f) => f.version === version)) throw new Error(`Instrument ${version} can’t be sent`);
   const reachable: PreparedInvitation[] = [];
   const unreachable: Recipient[] = [];
   for (const r of args.recipients) {
@@ -136,7 +138,7 @@ export async function createCampaign(
   const campaignId = await rpc<string>('cc_create_campaign', {
     p_clinic: args.clinicId,
     p_name: args.name,
-    p_version: CURRENT_VERSION,
+    p_version: version,
     p_kind: 'full',
     p_closes_on: args.closesOn,
     p_created_by: args.createdBy,

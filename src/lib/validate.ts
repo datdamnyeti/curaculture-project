@@ -1,7 +1,7 @@
 // Server-side validation of what a respondent sends. Every item is optional,
 // but every value that is present must be a real code for that item.
 import type { Instrument } from './instrument';
-import { itemMap, scaleLength } from './instrument';
+import { isShown, itemMap, scaleCodes } from './instrument';
 
 export interface Submission {
   demographics: Record<string, number | string>;
@@ -39,8 +39,12 @@ export function cleanSubmission(inst: Instrument, raw: unknown): Submission {
     const it = items[k];
     if (!it || it.kind === 'open') throw new ValidationError(`Unknown question ${k}`);
     if (v == null) continue;
-    if (!Number.isInteger(v) || (v as number) < 1 || (v as number) > scaleLength(inst, it)) throw new ValidationError(`Invalid answer for ${k}`);
+    if (!Number.isInteger(v) || !scaleCodes(inst, it).includes(v as number)) throw new ValidationError(`Invalid answer for ${k}`);
     out.answers[k] = v as number;
+  }
+  // A conditional follow-up is kept only if the answers that trigger it are there.
+  for (const k of Object.keys(out.answers)) {
+    if (!isShown(items[k], out.answers)) delete out.answers[k];
   }
 
   const open = (body.openEnded ?? {}) as Record<string, unknown>;

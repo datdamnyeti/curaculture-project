@@ -15,6 +15,7 @@ export interface Clinic {
 
 const TABS = [
   { href: '/app', label: 'Surveys' },
+  { href: '/app/practice', label: 'Practice data' },
   { href: '/app/team', label: 'Team' },
   { href: '/app/settings', label: 'Settings' },
 ];

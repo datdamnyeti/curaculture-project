@@ -179,3 +179,24 @@ describe('schema guarantees', () => {
 async function launchedCampaign() {
   return (await db.query<{ id: string }>('select id from campaigns limit 1')).rows[0];
 }
+
+describe('the v2.2 pilot survey', () => {
+  it('sends the pilot version, accepts code 0, drops a hidden follow-up and scores the pilot pages', async () => {
+    const c = await createCampaign(rpc, { clinicId, name: 'Pilot', closesOn: future, createdBy: null, recipients: staff, secret: SECRET, version: 'v2.2-pilot' });
+    const first = await loadSurvey(rpc, c.invitations[0].token);
+    expect(first).toMatchObject({ state: 'ready', version: 'v2.2-pilot' });
+    for (const [i, inv] of c.invitations.slice(0, 6).entries()) {
+      await submitSurvey(rpc, inv.token, { answers: { TC2: 5, OI1: 5, OI2: 4, OI3: 6, CA1: i < 5 ? 1 : 0, CA2: 0, CA3: 4, CA4: 1 } });
+    }
+    const stored = (await db.query<{ instrument_version: string; answers: Record<string, number> }>('select instrument_version, answers from responses')).rows;
+    expect(stored.every((r) => r.instrument_version === 'v2.2-pilot')).toBe(true);
+    expect(stored.filter((r) => r.answers.CA1 === 0).every((r) => r.answers.CA4 === undefined)).toBe(true);
+    const r = await campaignResults(rpc, c.campaignId, 'v2.2-pilot');
+    expect(r.pilot!.aggression).toMatchObject({ threatsBand: 'None', checkIn: { shown: 5, suppressed: false, n: 5 } });
+  });
+
+  it('refuses an instrument version that is not offered', async () => {
+    await expect(createCampaign(rpc, { clinicId, name: 'X', closesOn: future, createdBy: null, recipients: staff, secret: SECRET, version: 'v9' }))
+      .rejects.toThrow(/can’t be sent/);
+  });
+});

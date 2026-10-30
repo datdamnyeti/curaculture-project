@@ -7,7 +7,7 @@
 // - supplementary items and intent to leave are reported separately
 // - group comparisons only when every group shown has 5+ respondents
 import type { AreaId, Instrument, Item } from './instrument';
-import { itemMap, scaleLength } from './instrument';
+import { itemMap, scaleCodes } from './instrument';
 
 export const MIN_N = 5;
 
@@ -53,6 +53,22 @@ export interface Results {
   };
   lowestArea?: Record<string, number>;
   breakdowns?: Breakdown[];
+  /** v2.2 pilot pages. Reported on their own, never added to the areas. */
+  pilot?: PilotResults;
+}
+
+export interface PilotItem extends Distribution { id: string; text: string; short: string; agree: number }
+
+export interface PilotResults {
+  integration: { items: PilotItem[]; score: { n: number; mean: number | null } };
+  aggression: {
+    rudeness: { n: number; counts: number[]; anyShare: number; sixPlusShare: number };
+    /** Threats and physical acts are reported only as a band, never as counts. */
+    threatsBand: 'None' | '1–2 people' | '3 or more people';
+    threatsShare: number | null;
+    knowHowToReport: PilotItem;
+    checkIn: { shown: number; suppressed: boolean; n: number; counts: number[]; withinADay: number; toldNoOne: number };
+  };
 }
 
 /** Group definitions live in config, not code. Support staff = D1 codes 3 and 4. */
@@ -80,9 +96,10 @@ export function recode(item: Item, code: number | undefined | null): number | nu
   return item.reverse ? 7 - code : code;
 }
 
-function distribution(values: number[], length: number): Distribution {
+function distribution(values: number[], codes: number[]): Distribution {
+  const length = codes.length;
   const counts = Array(length).fill(0);
-  values.forEach((v) => { counts[v - 1] += 1; });
+  values.forEach((v) => { const i = codes.indexOf(v); if (i >= 0) counts[i] += 1; });
   const n = values.length;
   const six = length === 6;
   return {
@@ -97,7 +114,7 @@ function distribution(values: number[], length: number): Distribution {
 
 export function itemDistribution(inst: Instrument, item: Item, rs: StoredResponse[]): Distribution {
   const vals = rs.map((r) => recode(item, r.answers[item.id])).filter((v): v is number => v != null);
-  return distribution(vals, scaleLength(inst, item));
+  return distribution(vals, scaleCodes(inst, item));
 }
 
 export function personAreaScore(inst: Instrument, area: AreaId, r: StoredResponse): number | null {
@@ -114,7 +131,7 @@ export function areaResult(inst: Instrument, areaId: AreaId, rs: StoredResponse[
   const all: number[] = [];
   its.forEach((i) => rs.forEach((r) => { const v = recode(i, r.answers[i.id]); if (v != null) all.push(v); }));
   const personScores = rs.map((r) => personAreaScore(inst, areaId, r)).filter((v): v is number => v != null);
-  const d = distribution(all, 6);
+  const d = distribution(all, [1, 2, 3, 4, 5, 6]);
   return {
     ...d,
     mean: mean(personScores),
@@ -198,12 +215,62 @@ export function buildResults(inst: Instrument, rs: StoredResponse[]): Results {
     },
     lowestArea,
     breakdowns: GROUPINGS.map((g) => breakdown(inst, rs, g.key)),
+    pilot: items.OI1 && items.CA1 ? pilotResults(inst, rs) : undefined,
   };
 }
 
+/**
+ * The v2.2 pilot pages, under the spec's reporting rules:
+ * - OI: % agree at codes 4–6 and the mean per item; a provisional team
+ *   integration score (mean of OI1–OI4 for people who answered 3 or more).
+ * - CA1: share reporting any rudeness, and 6 or more times (codes 3–4).
+ * - CA2: a band only.
+ * - CA3: % agree at 4–6.
+ * - CA4: shown only to people who reported an incident; suppressed when fewer
+ *   than 5 were shown it. "Did not tell anyone in charge" is its own share.
+ */
+export function pilotResults(inst: Instrument, rs: StoredResponse[]): PilotResults {
+  const items = itemMap(inst);
+  const pilotItem = (id: string): PilotItem => {
+    const d = itemDistribution(inst, items[id], rs);
+    return { ...d, id, text: items[id].text, short: items[id].short, agree: d.n ? (d.counts[3] + d.counts[4] + d.counts[5]) / d.n : 0 };
+  };
+  const oiIds = ['OI1', 'OI2', 'OI3', 'OI4'];
+  const scores = rs.map((r) => oiIds.map((k) => r.answers[k]).filter((v): v is number => v != null))
+    .filter((v) => v.length >= 3).map((v) => mean(v)!);
+
+  const ca1 = itemDistribution(inst, items.CA1, rs);
+  const ca2 = itemDistribution(inst, items.CA2, rs);
+  const threatened = ca2.n - ca2.counts[0];
+  const shown = rs.filter((r) => (r.answers.CA1 ?? 0) > 0 || (r.answers.CA2 ?? 0) > 0).length;
+  const ca4 = itemDistribution(inst, items.CA4, rs);
+  const suppressed = shown < MIN_N;
+
+  return {
+    integration: { items: oiIds.map(pilotItem), score: { n: scores.length, mean: mean(scores) } },
+    aggression: {
+      rudeness: {
+        n: ca1.n, counts: ca1.counts,
+        anyShare: ca1.n ? (ca1.n - ca1.counts[0]) / ca1.n : 0,
+        sixPlusShare: ca1.n ? (ca1.counts[3] + ca1.counts[4]) / ca1.n : 0,
+      },
+      threatsBand: threatened === 0 ? 'None' : threatened <= 2 ? '1–2 people' : '3 or more people',
+      threatsShare: threatened >= 3 && ca2.n ? threatened / ca2.n : null,
+      knowHowToReport: pilotItem('CA3'),
+      checkIn: suppressed
+        ? { shown, suppressed, n: 0, counts: [], withinADay: 0, toldNoOne: 0 }
+        : { shown, suppressed, n: ca4.n, counts: ca4.counts, withinADay: ca4.n ? ca4.counts[0] / ca4.n : 0, toldNoOne: ca4.n ? ca4.counts[3] / ca4.n : 0 },
+    },
+  };
+}
+
+/** Items reported only as bands or under their own suppression rule. Row-level
+ *  codes go to researchers, never to clinic owners. */
+export const RESEARCHER_ONLY_ITEMS = ['CA2', 'CA4'];
+
 /** Item-level export keyed by item ID with raw codes, so data pools with the Qualtrics clinics. */
-export function exportCsv(inst: Instrument, campaignId: string, rs: StoredResponse[]): string {
-  const ids = inst.items.filter((i) => i.kind !== 'open').map((i) => i.id);
+export function exportCsv(inst: Instrument, campaignId: string, rs: StoredResponse[], opts: { researcher?: boolean } = {}): string {
+  const ids = inst.items.filter((i) => i.kind !== 'open' && (opts.researcher || !RESEARCHER_ONLY_ITEMS.includes(i.id))).map((i) => i.id);
   const demo = inst.demographics.map((d) => d.id);
   const head = ['campaign_id', 'instrument_version', ...demo, ...ids].join(',');
   const rows = rs.map((r) => [campaignId, inst.version, ...demo.map((d) => r.demographics[d] ?? ''), ...ids.map((id) => r.answers[id] ?? '')].join(','));

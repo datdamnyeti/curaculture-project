@@ -2,10 +2,12 @@
 // most favorable (6); reverse items are already recoded. Not a traffic light.
 const SIX = ['bg-scale-1', 'bg-scale-2', 'bg-scale-3', 'bg-scale-4', 'bg-scale-5', 'bg-scale-6'];
 const FIVE = ['bg-scale-1', 'bg-scale-3', 'bg-slate-300', 'bg-scale-4', 'bg-scale-6'];
+// Incident follow-up (CA4): within a day is the favorable end.
+const FOUR = ['bg-scale-6', 'bg-scale-4', 'bg-scale-2', 'bg-scale-1'];
 
 export default function DistBar({ counts, labels, risk = false, thin = false }: { counts: number[]; labels: string[]; risk?: boolean; thin?: boolean }) {
   const n = counts.reduce((s, x) => s + x, 0);
-  let cols = counts.length === 6 ? SIX : FIVE;
+  let cols = counts.length === 6 ? SIX : counts.length === 4 ? FOUR : FIVE;
   if (risk) cols = [...cols].reverse();
   const label = counts.map((k, i) => `${labels[i]}: ${k}`).join(', ');
   return (

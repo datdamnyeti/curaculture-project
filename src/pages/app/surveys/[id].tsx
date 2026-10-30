@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import AppShell from '@/components/layout/AppShell';
+import PilotPanels from '@/components/results/PilotPanels';
 import DistBar, { Legend } from '@/components/results/DistBar';
 import { apiFetch } from '@/lib/apiClient';
 import { supabase } from '@/lib/supabaseBrowser';
@@ -135,6 +136,8 @@ function View({ canEdit }: { canEdit: boolean }) {
               </div>
             ))}
           </section>
+
+          {r.pilot && <PilotPanels inst={inst} p={r.pilot} />}
 
           <section className="card flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Group breakdowns</h2>

@@ -20,6 +20,8 @@ analysis rules.
 | Logo (stage ring) and wordmark | `src/components/brand/Logo.tsx`, `public/logo.svg` |
 | "Book a demo" requests from the landing page | `src/pages/api/demo-request.ts`, `src/lib/demoRequest.ts`, `demo_requests` table |
 | API routes | `src/pages/api/` |
+| Instrument v2.2-pilot: v2.1 plus two pilot pages (new team members, clients) | `src/lib/instrument/v22.ts` |
+| Practice data: vitals, exit records, onboarding checklists, client-safety audit, stay-interview themes | `src/lib/practice/`, `src/pages/app/practice.tsx`, `src/pages/api/practice/` |
 | Tests, including SQL tests on real Postgres (PGlite) | `tests/` |
 
 ## The anonymity firewall
@@ -78,6 +80,24 @@ npx tsc --noEmit
 npm run lint
 npm run build
 ```
+
+## v2.2 pilot tools (not yet validated)
+
+* **Staff pages.** Owners can send v2.1 on its own or with two pilot pages placed after
+  Compensation and before the written questions: team integration (OI1–OI4) and clients
+  (CA1–CA4). CA1–CA2 use a frequency scale coded 0–4. CA4 is asked only after an incident
+  and is dropped server-side if the triggering answers are removed. Pilot results are
+  reported on their own, never added to the eight areas. Threats (CA2) show only as a
+  band, CA4 is hidden when fewer than 5 were asked it, and both stay out of owner exports.
+* **Owner records.** Quarterly vitals, exit records, onboarding checklists, the
+  client-conduct policy audit and stay-interview themes. These describe the clinic, so the
+  5-response rule does not apply; counts lead and rates come second. A reconciliation check
+  flags a quarter whose headcount doesn't equal last quarter plus hires minus exits.
+* **Signals.** Six pairs put an owner record next to a staff result (turnover and intent to
+  leave, after-hours load and Workload & Recovery, exit reasons and the lowest area, the
+  reporting route, check-ins after an incident, onboarding and integration). Each is
+  labelled corroborated or diverges and shows the pilot rule it used. Staff results come in
+  only through `campaignResults`, so nothing below 5 responses is used.
 
 ## Not built yet
 

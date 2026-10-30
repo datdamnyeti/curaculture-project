@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { getInstrument, itemMap } from '@/lib/instrument';
+import { getInstrument, isShown, itemMap, scaleCodes } from '@/lib/instrument';
 import type { Instrument, Item } from '@/lib/instrument';
 import type { SurveyState } from '@/lib/server/surveyService';
 
@@ -159,7 +159,8 @@ function Survey({ inst, intro, clinic, page, a, setA, onNext, onBack, onLater, o
             )}
           </fieldset>
         ))}
-        {pg.type === 'items' && pg.items!.map((id) => <Question key={id} item={items[id]} inst={inst} value={a.answers[id]} onPick={(v) => setAnswer(id, v)} />)}
+        {pg.type === 'items' && pg.items!.filter((id) => isShown(items[id], a.answers)).map((id) => <Question key={id} item={items[id]} inst={inst} value={a.answers[id]} onPick={(v) => setAnswer(id, v)} />)}
+        {pg.pilot && <p className="mt-2 text-xs text-slate-500">These questions are part of a pilot and are reported separately from the rest of the survey.</p>}
         {pg.type === 'open' && (
           <>
             <p className="mb-4 text-sm text-slate-600">These are optional. Leave out names and details that could identify you or a coworker.</p>
@@ -188,15 +189,16 @@ function Survey({ inst, intro, clinic, page, a, setA, onNext, onBack, onLater, o
 }
 
 function Question({ item, inst, value, onPick }: { item: Item; inst: Instrument; value?: number; onPick: (v: number) => void }) {
-  const labels = inst.scales[item.scale!].labels;
-  const grid = labels.length === 6 ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-1 sm:grid-cols-5';
+  const labels = inst.scales[item.scale!]!.labels;
+  const codes = scaleCodes(inst, item);
+  const grid = labels.length === 6 ? 'grid-cols-3 sm:grid-cols-6' : labels.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-5';
   return (
     <fieldset className="flex flex-col gap-3 border-t border-slate-200 py-5 first-of-type:border-t-0 first-of-type:pt-0">
       <legend className="mb-3 font-medium">{item.text}</legend>
       <div className={`grid gap-2 ${grid}`}>
         {labels.map((l, i) => (
-          <button key={l} type="button" aria-pressed={value === i + 1} onClick={() => onPick(i + 1)}
-            className={`min-h-12 rounded-lg border px-2 py-2 text-xs leading-tight sm:text-[0.8rem] ${value === i + 1 ? 'border-brand bg-brand font-semibold text-white' : 'border-slate-300 bg-slate-50'}`}>{l}</button>
+          <button key={l} type="button" aria-pressed={value === codes[i]} onClick={() => onPick(codes[i])}
+            className={`min-h-12 rounded-lg border px-2 py-2 text-xs leading-tight sm:text-[0.8rem] ${value === codes[i] ? 'border-brand bg-brand font-semibold text-white' : 'border-slate-300 bg-slate-50'}`}>{l}</button>
         ))}
       </div>
     </fieldset>

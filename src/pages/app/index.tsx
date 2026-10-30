@@ -6,6 +6,8 @@ import { apiFetch } from '@/lib/apiClient';
 import { useUI } from '@/contexts/UIContext';
 import type { Counts } from '@/lib/server/surveyService';
 import { fmtDate as fmt } from '@/lib/format';
+import { CURRENT_VERSION, FIELDABLE } from '@/lib/instrument';
+import type { DueItem } from '@/lib/practice/metrics';
 
 interface Campaign { id: string; name: string; status: 'active' | 'closed'; closes_on: string; opens_on: string; instrument_version: string; counts: Counts }
 interface Employee { id: string; name: string; email: string | null; phone: string | null }
@@ -21,6 +23,8 @@ function Surveys({ clinic, canEdit }: { clinic: Clinic; canEdit: boolean }) {
   const { showErrorToast } = useUI();
   const load = useCallback(() => apiFetch<{ campaigns: Campaign[] }>('/api/campaigns').then((r) => setList(r.campaigns)).catch((e) => showErrorToast(e.message)), [showErrorToast]);
   useEffect(() => { load(); }, [load]);
+  const [due, setDue] = useState<DueItem[]>([]);
+  useEffect(() => { apiFetch<{ due: DueItem[] }>('/api/practice').then((r) => setDue(r.due)).catch(() => setDue([])); }, []);
 
   return (
     <>
@@ -29,6 +33,13 @@ function Surveys({ clinic, canEdit }: { clinic: Clinic; canEdit: boolean }) {
           <p className="text-sm text-slate-600">Each person gets a single-use link by email or text. Answers are stored with no link to who gave them.</p></div>
         {canEdit && !creating && <button className="btn btn-primary" onClick={() => setCreating(true)}>Send a survey</button>}
       </div>
+      {due.length > 0 && (
+        <Link href="/app/practice" className="card flex flex-col gap-2 hover:border-slate-400">
+          <div className="flex items-center justify-between gap-2"><h2 className="font-semibold">Due from practice data</h2><span className="text-sm text-brand">Open →</span></div>
+          {due.slice(0, 4).map((x) => <p key={x.key} className="text-sm"><span className={`mr-2 rounded-full px-2 py-0.5 text-xs font-semibold ${x.overdue ? 'bg-orange-50 text-orange-800' : 'bg-brand-soft text-brand'}`}>{x.badge ?? (x.overdue ? 'Overdue' : `Due ${fmt(x.due)}`)}</span>{x.title}</p>)}
+          {due.length > 4 && <p className="text-sm text-slate-500">and {due.length - 4} more</p>}
+        </Link>
+      )}
       {creating && <NewSurvey onCancel={() => setCreating(false)} onSent={() => { setCreating(false); load(); }} />}
       {list && !list.length && !creating && (
         <div className="card flex flex-col items-center gap-3 py-10 text-center">
@@ -42,7 +53,7 @@ function Surveys({ clinic, canEdit }: { clinic: Clinic; canEdit: boolean }) {
         return (
           <Link key={c.id} href={`/app/surveys/${c.id}`} className="card flex flex-col gap-3 hover:border-slate-400">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <div><p className="eyebrow">Practice Assessment · {c.instrument_version}</p><h2 className="text-lg font-semibold">{c.name}</h2>
+              <div><p className="eyebrow">Practice Assessment · {c.instrument_version}{c.instrument_version !== CURRENT_VERSION ? " · includes pilot pages" : ""}</p><h2 className="text-lg font-semibold">{c.name}</h2>
                 <p className="text-sm text-slate-500">Sent {fmt(c.opens_on)} · {c.status === 'active' ? 'closes' : 'closed'} {fmt(c.closes_on)}</p></div>
               <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${c.status === 'active' ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-500'}`}>{c.status === 'active' ? 'Collecting' : 'Closed'}</span>
             </div>
@@ -59,6 +70,7 @@ function NewSurvey({ onCancel, onSent }: { onCancel: () => void; onSent: () => v
   const [emps, setEmps] = useState<Employee[] | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [name, setName] = useState('');
+  const [version, setVersion] = useState<string>(CURRENT_VERSION);
   const [closes, setCloses] = useState(() => new Date(Date.now() + 18 * 864e5).toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -76,7 +88,7 @@ function NewSurvey({ onCancel, onSent }: { onCancel: () => void; onSent: () => v
     setBusy(true); setErr('');
     try {
       const r = await apiFetch<{ sent: { email: number; text: number }; failed: number; simulated: boolean }>('/api/campaigns', {
-        method: 'POST', body: JSON.stringify({ name: name.trim() || 'Practice assessment', closesOn: closes, employeeIds: [...sel] }),
+        method: 'POST', body: JSON.stringify({ name: name.trim() || 'Practice assessment', closesOn: closes, employeeIds: [...sel], version }),
       });
       showSuccessToast(`Sent ${r.sent.email} by email and ${r.sent.text} by text${r.failed ? `; ${r.failed} failed` : ''}${r.simulated ? ' (simulated: no email or text provider is set up)' : ''}.`, 7000);
       onSent();
@@ -85,8 +97,10 @@ function NewSurvey({ onCancel, onSent }: { onCancel: () => void; onSent: () => v
 
   return (
     <section className="card flex flex-col gap-4">
-      <div className="flex items-start justify-between"><div><p className="eyebrow">New survey</p><h2 className="text-lg font-semibold">Veterinary Practice Assessment v2.1</h2></div><button className="btn btn-ghost" onClick={onCancel}>Cancel</button></div>
+      <div className="flex items-start justify-between"><div><p className="eyebrow">New survey</p><h2 className="text-lg font-semibold">Send a survey</h2></div><button className="btn btn-ghost" onClick={onCancel}>Cancel</button></div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <label className="field sm:col-span-2"><span>Survey</span><select className="input" value={version} onChange={(e) => setVersion(e.target.value)}>{FIELDABLE.map((f) => <option key={f.version} value={f.version}>{f.label}</option>)}</select>
+          {version !== CURRENT_VERSION && <span className="text-xs font-normal text-slate-500">Adds two pilot pages (new team members, clients) before the written questions. Pilot, not yet validated; reported separately.</span>}</label>
         <label className="field"><span>Survey name</span><input className="input" placeholder="Spring 2027 baseline" value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label className="field"><span>Closes</span><input className="input" type="date" value={closes} onChange={(e) => setCloses(e.target.value)} /></label>
       </div>
